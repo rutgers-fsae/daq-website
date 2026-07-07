@@ -9,7 +9,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   return response.json() as Promise<T>;
 }
 
-function errorMessageFromResponse(text: string): string {
+export function errorMessageFromResponse(text: string): string {
   if (!text) return "Request failed";
   try {
     const body = JSON.parse(text) as { detail?: unknown };

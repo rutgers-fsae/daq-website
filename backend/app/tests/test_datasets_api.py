@@ -129,3 +129,111 @@ def test_preview_rejects_limit_above_configured_max():
     )
 
     assert response.status_code == 422
+
+
+def test_download_returns_parsed_csv_without_auth():
+    csv_path = settings.data_dir / "sample.csv"
+    csv_path.write_text("Time,Speed\n0,10\n1,20\n", encoding="utf-8")
+    record = registry.register(csv_path.name, csv_path.stat().st_size, original_name="Track Day.csv")
+
+    response = client.get(f"/api/datasets/{record.slug}/download")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/csv")
+    assert response.headers["content-disposition"] == 'attachment; filename="Track-Day-parsed.csv"'
+    assert response.text == "Time,Speed\n0,10\n1,20\n"
+
+
+def test_download_motec_csv_returns_parsed_table():
+    csv_path = settings.data_dir / "motec.csv"
+    csv_path.write_text(
+        '\n'.join(
+            [
+                '"Format","MoTeC CSV File"',
+                '"Sample Rate","500.000","Hz"',
+                '',
+                '"Time","Battery Temp","Motor Speed"',
+                '"s","C","rpm"',
+                '',
+                '"0.000","18.0","0"',
+                '"0.002","18.1","10"',
+            ]
+        ),
+        encoding="utf-8",
+    )
+    record = registry.register(csv_path.name, csv_path.stat().st_size)
+
+    response = client.get(f"/api/datasets/{record.slug}/download")
+
+    assert response.status_code == 200
+    assert response.text == "Time,Battery Temp,Motor Speed\n0.0,18.0,0\n0.002,18.1,10\n"
+
+
+def test_filtered_download_applies_export_filters():
+    csv_path = settings.data_dir / "sample.csv"
+    csv_path.write_text("Time,Speed,Driver\n0,10,Ada\n1,20,Bea\n2,30,Ada\n", encoding="utf-8")
+    record = registry.register(csv_path.name, csv_path.stat().st_size)
+
+    response = client.post(
+        f"/api/datasets/{record.slug}/download",
+        json={"filters": [{"column": "Driver", "op": "eq", "value": "Ada"}, {"column": "Speed", "op": "gte", "value": 30}]},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-disposition"] == 'attachment; filename="sample-filtered-parsed.csv"'
+    assert response.text == "Time,Speed,Driver\n2,30,Ada\n"
+
+
+def test_filtered_download_limits_selected_columns_in_dataset_order():
+    csv_path = settings.data_dir / "sample.csv"
+    csv_path.write_text("Time,Speed,Driver\n0,10,Ada\n1,20,Bea\n2,30,Ada\n", encoding="utf-8")
+    record = registry.register(csv_path.name, csv_path.stat().st_size)
+
+    response = client.post(
+        f"/api/datasets/{record.slug}/download",
+        json={"columns": ["Driver", "Time"], "filters": [{"column": "Speed", "op": "gte", "value": 20}]},
+    )
+
+    assert response.status_code == 200
+    assert response.text == "Time,Driver\n1,Bea\n2,Ada\n"
+
+
+def test_filtered_download_rejects_unknown_filter_columns():
+    csv_path = settings.data_dir / "sample.csv"
+    csv_path.write_text("Time,Speed\n0,10\n1,20\n", encoding="utf-8")
+    record = registry.register(csv_path.name, csv_path.stat().st_size)
+
+    response = client.post(
+        f"/api/datasets/{record.slug}/download",
+        json={"filters": [{"column": "Missing", "op": "eq", "value": "x"}]},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Unknown dataset columns: Missing"
+
+
+def test_filtered_download_rejects_unknown_selected_columns():
+    csv_path = settings.data_dir / "sample.csv"
+    csv_path.write_text("Time,Speed\n0,10\n1,20\n", encoding="utf-8")
+    record = registry.register(csv_path.name, csv_path.stat().st_size)
+
+    response = client.post(
+        f"/api/datasets/{record.slug}/download",
+        json={"columns": ["Time", "Missing"], "filters": []},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Unknown dataset columns: Missing"
+
+
+def test_filtered_download_rejects_empty_selected_columns():
+    csv_path = settings.data_dir / "sample.csv"
+    csv_path.write_text("Time,Speed\n0,10\n1,20\n", encoding="utf-8")
+    record = registry.register(csv_path.name, csv_path.stat().st_size)
+
+    response = client.post(
+        f"/api/datasets/{record.slug}/download",
+        json={"columns": [], "filters": []},
+    )
+
+    assert response.status_code == 422

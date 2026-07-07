@@ -1,8 +1,11 @@
-from fastapi import APIRouter
+import re
+from pathlib import Path
+
+from fastapi import APIRouter, Response
 
 from app.config import settings
 from app.core.errors import bad_request
-from app.models.chart import ChartRequest, PreviewRequest
+from app.models.chart import ChartRequest, ExportRequest, PreviewRequest
 from app.models.dataset import DatasetListItem
 from app.services.chart_builder import build_chart_payload
 from app.services.csv_reader import (
@@ -62,6 +65,40 @@ def chart_data(slug: str, payload: ChartRequest) -> dict:
     return build_chart_payload(filtered, payload.chart_type, payload.x_column, payload.y_columns, payload.group_by)
 
 
+@router.get("/{slug}/download")
+def download_dataset(slug: str) -> Response:
+    return _download_dataset(slug, [], None)
+
+
+@router.post("/{slug}/download")
+def download_filtered_dataset(slug: str, payload: ExportRequest) -> Response:
+    return _download_dataset(slug, [rule.model_dump() for rule in payload.filters], payload.columns)
+
+
+def _download_dataset(slug: str, filters: list[dict], columns: list[str] | None) -> Response:
+    record = registry.get(slug)
+    df = read_dataset(slug)
+    _validate_filter_columns(df.columns, filters)
+    _validate_requested_columns(df.columns, set(columns) if columns is not None else None)
+    if filters:
+        df = apply_filters(df, filters)
+    if columns is not None:
+        df = df.loc[:, [column for column in df.columns if column in set(columns)]]
+    suffix = "filtered-parsed" if filters else "parsed"
+    filename = _download_filename(record.original_name or record.filename, suffix)
+    return Response(
+        content=df.to_csv(index=False),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+def _download_filename(source_name: str, suffix: str) -> str:
+    stem = Path(source_name).stem or "dataset"
+    safe_stem = re.sub(r"[^A-Za-z0-9._-]+", "-", stem).strip(".-") or "dataset"
+    return f"{safe_stem}-{suffix}.csv"
+
+
 def _columns_for_chart(payload: ChartRequest, filters: list[dict]) -> set[str] | None:
     columns = set(payload.y_columns)
     if payload.x_column:
@@ -79,5 +116,18 @@ def _validate_requested_columns(available_columns, requested_columns: set[str] |
     if not requested_columns:
         return
     missing = sorted(requested_columns - set(available_columns))
+    if missing:
+        raise bad_request(f"Unknown dataset columns: {', '.join(missing)}")
+
+
+def _validate_filter_columns(available_columns, filters: list[dict]) -> None:
+    available = set(available_columns)
+    missing = sorted(
+        {
+            column
+            for rule in filters
+            if isinstance((column := rule.get("column")), str) and column not in available
+        }
+    )
     if missing:
         raise bad_request(f"Unknown dataset columns: {', '.join(missing)}")

@@ -1,8 +1,9 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Database, FileSpreadsheet } from "lucide-react";
+import { Database, Download, FileSpreadsheet } from "lucide-react";
 import { UploadPanel } from "../components/UploadPanel";
 import { useDatasets } from "../hooks/useDatasets";
-import { Alert, Badge, Panel } from "../components/ui";
+import { datasetDownloadUrl } from "../api/datasets";
+import { Alert, Badge, Panel, Tooltip } from "../components/ui";
 
 function formatBytes(size: number) {
   if (!Number.isFinite(size) || size <= 0) return "0 B";
@@ -43,19 +44,32 @@ export function DatasetListPage() {
         <ul className="grid gap-2">
           {datasets.map((dataset) => (
             <li key={dataset.slug}>
-              <Link
-                to={`/datasets/${dataset.slug}`}
-                className="group grid gap-2 rounded-lg border border-border bg-surface px-3 py-3 text-sm shadow-sm transition hover:-translate-y-0.5 hover:border-button hover:shadow-md"
-              >
-                <span className="flex items-start justify-between gap-3">
+              <article className="group grid gap-2 rounded-lg border border-border bg-surface px-3 py-3 text-sm shadow-sm transition hover:-translate-y-0.5 hover:border-button hover:shadow-md">
+                <div className="flex items-start justify-between gap-3">
                   <span className="flex min-w-0 items-center gap-2">
                     <FileSpreadsheet size={16} aria-hidden="true" className="shrink-0 text-button" />
-                    <span className="truncate font-semibold text-text group-hover:text-button">{dataset.title}</span>
+                    <Link
+                      to={`/datasets/${dataset.slug}`}
+                      className="truncate font-semibold text-text transition hover:text-button focus:outline-none focus:ring-2 focus:ring-ring/40"
+                    >
+                      {dataset.title}
+                    </Link>
                   </span>
-                  <Badge tone="default" className="shrink-0">{formatBytes(dataset.size_bytes)}</Badge>
-                </span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <Badge tone="default">{formatBytes(dataset.size_bytes)}</Badge>
+                    <Tooltip label={`Download ${dataset.title}`}>
+                      <a
+                        href={datasetDownloadUrl(dataset.slug)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-muted transition hover:bg-surface-soft hover:text-text focus:outline-none focus:ring-2 focus:ring-ring/40"
+                        aria-label={`Download ${dataset.title}`}
+                      >
+                        <Download size={15} aria-hidden="true" />
+                      </a>
+                    </Tooltip>
+                  </span>
+                </div>
                 <span className="truncate text-xs text-muted">{dataset.filename}</span>
-              </Link>
+              </article>
             </li>
           ))}
         </ul>

@@ -34,3 +34,8 @@ class PreviewRequest(BaseModel):
         if value is not None and value > settings.max_preview_rows:
             raise ValueError(f"limit cannot exceed {settings.max_preview_rows}")
         return value
+
+
+class ExportRequest(BaseModel):
+    filters: list[FilterRule] = Field(default_factory=list)
+    columns: list[str] | None = Field(default=None, min_length=1)

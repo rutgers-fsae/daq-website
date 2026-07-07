@@ -18,14 +18,15 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ArrowLeft, Columns2, GripVertical, Plus, Rows2, Trash2 } from "lucide-react";
+import { ArrowLeft, Columns2, Download, Filter, GripVertical, Plus, Rows2, Trash2, X } from "lucide-react";
+import { createPortal } from "react-dom";
 import { Link, useParams } from "react-router-dom";
 import { ChartBuilder } from "../components/ChartBuilder";
 import { PlotView } from "../components/PlotView";
-import { getChartData } from "../api/datasets";
+import { exportDataset, getChartData } from "../api/datasets";
 import { useDatasetSchema } from "../hooks/useDatasetSchema";
-import type { ChartConfig, ChartRequest, PlotTrace } from "../types/chart";
-import { Alert, Badge, Button, FieldInput, Panel, Tooltip } from "../components/ui";
+import type { ChartConfig, ChartRequest, FilterRule, PlotTrace } from "../types/chart";
+import { Alert, Badge, Button, FieldInput, FieldSelect, Label, Panel, Tooltip } from "../components/ui";
 import { cxClasses } from "../components/ui-utils";
 
 type Props = {
@@ -49,6 +50,13 @@ type GraphState = {
 };
 
 type PersistedGraphState = Pick<GraphState, "id" | "name" | "chartConfig" | "axisTitles">;
+
+type ExportFilterDraft = {
+  id: number;
+  column: string;
+  op: FilterRule["op"];
+  value: string;
+};
 
 function emptyGraph(id: number, name = `Graph ${id}`): GraphState {
   return {
@@ -114,6 +122,260 @@ function chartConfigsEqual(left: ChartConfig, right: ChartConfig): boolean {
         filter.op === right.filters[index]?.op &&
         filter.value === right.filters[index]?.value,
     )
+  );
+}
+
+function emptyExportFilter(id: number, column = ""): ExportFilterDraft {
+  return { id, column, op: "eq", value: "" };
+}
+
+function exportValueForColumn(value: string, columnType: string | undefined, op: FilterRule["op"]) {
+  if (columnType !== "numeric" || op === "contains") {
+    return value;
+  }
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : value;
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+type ExportModalProps = {
+  slug: string;
+  columns: Parameters<typeof ChartBuilder>[0]["columns"];
+  onClose: () => void;
+};
+
+function ExportModal({ slug, columns, onClose }: ExportModalProps) {
+  const [nextFilterId, setNextFilterId] = useState(2);
+  const [filters, setFilters] = useState<ExportFilterDraft[]>(() => [emptyExportFilter(1, columns[0]?.name || "")]);
+  const [selectedColumns, setSelectedColumns] = useState<string[]>(() => columns.map((column) => column.name));
+  const [isExporting, setIsExporting] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const available = new Set(columns.map((column) => column.name));
+    setSelectedColumns((current) => current.filter((column) => available.has(column)));
+    setFilters((current) =>
+      current.map((filter) => ({
+        ...filter,
+        column: filter.column && available.has(filter.column) ? filter.column : columns[0]?.name || "",
+      })),
+    );
+  }, [columns]);
+
+  useEffect(() => {
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+
+  function addFilter() {
+    setFilters((current) => [...current, emptyExportFilter(nextFilterId, columns[0]?.name || "")]);
+    setNextFilterId((current) => current + 1);
+  }
+
+  function updateFilter(id: number, patch: Partial<ExportFilterDraft>) {
+    setFilters((current) => current.map((filter) => (filter.id === id ? { ...filter, ...patch } : filter)));
+  }
+
+  function removeFilter(id: number) {
+    setFilters((current) => current.filter((filter) => filter.id !== id));
+  }
+
+  function toggleColumn(columnName: string) {
+    setSelectedColumns((current) =>
+      current.includes(columnName) ? current.filter((column) => column !== columnName) : [...current, columnName],
+    );
+  }
+
+  function buildFilters(): FilterRule[] {
+    return filters.flatMap((filter) => {
+      const value = filter.value.trim();
+      if (!filter.column || value === "") {
+        return [];
+      }
+      const column = columns.find((item) => item.name === filter.column);
+      return [{ column: filter.column, op: filter.op, value: exportValueForColumn(value, column?.type, filter.op) }];
+    });
+  }
+
+  function buildColumns(): string[] {
+    const selected = new Set(selectedColumns);
+    return columns.map((column) => column.name).filter((column) => selected.has(column));
+  }
+
+  async function handleExport() {
+    setIsExporting(true);
+    setStatus(null);
+    setError(null);
+    try {
+      const result = await exportDataset(slug, buildFilters(), buildColumns());
+      downloadBlob(result.blob, result.filename);
+      setStatus("CSV export started.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to export CSV");
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
+  const exportDisabled = isExporting || selectedColumns.length === 0 || columns.length === 0;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[10000] grid place-items-center bg-black/50 p-4"
+      role="presentation"
+      onClick={onClose}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="csv-export-title"
+        className="grid max-h-[calc(100vh-2rem)] w-full max-w-4xl overflow-hidden rounded-lg border border-border bg-panel shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <Filter size={16} aria-hidden="true" className="text-button" />
+              <h3 id="csv-export-title" className="text-sm font-semibold uppercase tracking-[0.16em] text-muted">CSV Export</h3>
+            </div>
+            <p className="mt-1 text-sm text-muted">Select columns and filters for this download.</p>
+          </div>
+          <Tooltip label="Close export modal">
+            <Button type="button" onClick={onClose} variant="ghost" size="icon" aria-label="Close export modal">
+              <X size={16} aria-hidden="true" />
+            </Button>
+          </Tooltip>
+        </div>
+        <div className="grid gap-4 overflow-y-auto p-4">
+          <section className="grid gap-2 rounded-md border border-border bg-surface p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h4 className="text-sm font-semibold text-text">Columns</h4>
+                <p className="text-xs text-muted">{selectedColumns.length} of {columns.length} selected</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button type="button" onClick={() => setSelectedColumns(columns.map((column) => column.name))} variant="outline" size="sm">
+                  Select All
+                </Button>
+                <Button type="button" onClick={() => setSelectedColumns([])} variant="ghost" size="sm">
+                  Clear
+                </Button>
+              </div>
+            </div>
+            <div className="grid max-h-52 gap-1 overflow-y-auto rounded-md border border-border bg-panel p-2 sm:grid-cols-2 lg:grid-cols-3">
+              {columns.map((column) => (
+                <label key={column.name} className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-sm text-text hover:bg-surface-soft">
+                  <input
+                    type="checkbox"
+                    checked={selectedColumns.includes(column.name)}
+                    onChange={() => toggleColumn(column.name)}
+                    className="h-4 w-4 shrink-0 accent-button"
+                  />
+                  <span className="truncate">{column.display_name || column.name}</span>
+                </label>
+              ))}
+            </div>
+            {selectedColumns.length === 0 && (
+              <Alert tone="warning" className="text-xs">
+                Select at least one column to export.
+              </Alert>
+            )}
+          </section>
+          <section className="grid gap-2 rounded-md border border-border bg-surface p-3">
+            <div>
+              <h4 className="text-sm font-semibold text-text">Filters</h4>
+              <p className="text-xs text-muted">Export filters are separate from graph filters.</p>
+            </div>
+            {filters.map((filter) => (
+              <div key={filter.id} className="grid gap-2 rounded-md border border-border bg-panel p-2 md:grid-cols-[minmax(0,1.4fr)_minmax(120px,0.6fr)_minmax(0,1fr)_auto]">
+                <Label className="grid gap-1">
+                  Column
+                  <FieldSelect
+                    value={filter.column}
+                    onChange={(event) => updateFilter(filter.id, { column: event.target.value })}
+                    aria-label="Export filter column"
+                  >
+                    {columns.map((column) => (
+                      <option key={column.name} value={column.name}>
+                        {column.display_name || column.name}
+                      </option>
+                    ))}
+                  </FieldSelect>
+                </Label>
+                <Label className="grid gap-1">
+                  Operator
+                  <FieldSelect
+                    value={filter.op}
+                    onChange={(event) => updateFilter(filter.id, { op: event.target.value as FilterRule["op"] })}
+                    aria-label="Export filter operator"
+                  >
+                    <option value="eq">Equals</option>
+                    <option value="contains">Contains</option>
+                    <option value="gte">At least</option>
+                    <option value="lte">At most</option>
+                  </FieldSelect>
+                </Label>
+                <Label className="grid gap-1">
+                  Value
+                  <FieldInput
+                    value={filter.value}
+                    onChange={(event) => updateFilter(filter.id, { value: event.target.value })}
+                    aria-label="Export filter value"
+                    placeholder="Any value"
+                  />
+                </Label>
+                <Tooltip label="Remove export filter">
+                  <Button
+                    type="button"
+                    onClick={() => removeFilter(filter.id)}
+                    disabled={filters.length === 1}
+                    variant="ghost"
+                    size="icon"
+                    className="self-end"
+                    aria-label="Remove export filter"
+                  >
+                    <X size={15} aria-hidden="true" />
+                  </Button>
+                </Tooltip>
+              </div>
+            ))}
+            <Button type="button" onClick={addFilter} disabled={columns.length === 0} variant="outline" className="justify-self-start">
+              <Plus size={15} aria-hidden="true" />
+              Add Export Filter
+            </Button>
+            {status && <Alert tone="success">{status}</Alert>}
+            {error && <Alert tone="danger">{error}</Alert>}
+          </section>
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border px-4 py-3">
+          <Button type="button" onClick={onClose} variant="ghost">
+            Cancel
+          </Button>
+          <Button type="button" onClick={handleExport} disabled={exportDisabled} variant="primary">
+            <Download size={15} aria-hidden="true" />
+            {isExporting ? "Exporting..." : "Export CSV"}
+          </Button>
+        </div>
+      </section>
+    </div>,
+    document.body,
   );
 }
 
@@ -247,6 +509,7 @@ export function DatasetPage({ theme }: Props) {
     const stored = localStorage.getItem("daq-graph-layout");
     return stored === "one" || stored === "two" ? stored : "two";
   });
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -383,6 +646,14 @@ export function DatasetPage({ theme }: Props) {
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
+            onClick={() => setIsExportModalOpen(true)}
+            variant="secondary"
+          >
+            <Download size={15} aria-hidden="true" />
+            Download CSV
+          </Button>
+          <Button
+            type="button"
             onClick={addGraph}
             variant="primary"
           >
@@ -413,6 +684,9 @@ export function DatasetPage({ theme }: Props) {
       </Panel>
       {loading && <p className="text-sm text-muted">Loading schema...</p>}
       {error && <Alert tone="danger">Schema load failed: {error}</Alert>}
+      {isExportModalOpen && !loading && !error && (
+        <ExportModal slug={slug} columns={columns} onClose={() => setIsExportModalOpen(false)} />
+      )}
       {!loading && !error && (
         <DndContext
           sensors={sensors}

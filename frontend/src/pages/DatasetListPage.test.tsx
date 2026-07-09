@@ -18,6 +18,12 @@ describe("DatasetListPage", () => {
           filename: "test-run.csv",
           uploaded_at: "2026-01-01T00:00:00Z",
           size_bytes: 1024,
+          metadata: {
+            driver: "",
+            ride_height: null,
+            aero_configuration: "",
+            testing_notes: "",
+          },
         },
       ],
       loading: false,

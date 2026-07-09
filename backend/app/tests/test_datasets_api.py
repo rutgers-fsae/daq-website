@@ -1,3 +1,5 @@
+import json
+
 from fastapi.testclient import TestClient
 
 from app.config import settings
@@ -14,6 +16,74 @@ def test_datasets_list_works():
     response = client.get("/api/datasets")
     assert response.status_code == 200
     assert isinstance(response.json(), list)
+
+
+def test_dataset_detail_returns_default_metadata_for_existing_records():
+    settings.registry_path.write_text(
+        json.dumps(
+            [
+                {
+                    "slug": "sample",
+                    "filename": "sample.csv",
+                    "original_name": "sample.csv",
+                    "title": "sample",
+                    "uploaded_at": "2026-07-08T12:00:00Z",
+                    "size_bytes": 12,
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    response = client.get("/api/datasets/sample")
+
+    assert response.status_code == 200
+    assert response.json()["metadata"] == {
+        "driver": "",
+        "ride_height": None,
+        "aero_configuration": "",
+        "testing_notes": "",
+    }
+
+
+def test_update_dataset_metadata_requires_upload_password():
+    csv_path = settings.data_dir / "sample.csv"
+    csv_path.write_text("Time,Speed\n0,10\n", encoding="utf-8")
+    record = registry.register(csv_path.name, csv_path.stat().st_size)
+
+    response = client.patch(
+        f"/api/datasets/{record.slug}/metadata",
+        json={"driver": "Ada", "ride_height": 12.34, "aero_configuration": "Sprint", "testing_notes": "Baseline"},
+    )
+
+    assert response.status_code == 401
+
+
+def test_update_dataset_metadata_persists_to_registry_file():
+    csv_path = settings.data_dir / "sample.csv"
+    csv_path.write_text("Time,Speed\n0,10\n", encoding="utf-8")
+    record = registry.register(csv_path.name, csv_path.stat().st_size)
+
+    response = client.patch(
+        f"/api/datasets/{record.slug}/metadata",
+        headers={"Authorization": "Bearer changeme"},
+        json={
+            "driver": "Ada",
+            "ride_height": 12.345,
+            "aero_configuration": "High downforce",
+            "testing_notes": "Clean first run.",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["metadata"] == {
+        "driver": "Ada",
+        "ride_height": 12.35,
+        "aero_configuration": "High downforce",
+        "testing_notes": "Clean first run.",
+    }
+    payload = json.loads(settings.registry_path.read_text(encoding="utf-8"))
+    assert payload[0]["metadata"] == response.json()["metadata"]
 
 
 def test_motec_reader_supports_selected_columns(tmp_path):

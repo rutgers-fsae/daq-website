@@ -18,15 +18,16 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ArrowLeft, Columns2, Download, Filter, GripVertical, Plus, Rows2, Trash2, X } from "lucide-react";
+import { ArrowLeft, Columns2, Download, Filter, GripVertical, LockKeyhole, Plus, Rows2, Trash2, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { Link, useParams } from "react-router-dom";
 import { ChartBuilder } from "../components/ChartBuilder";
 import { PlotView } from "../components/PlotView";
-import { exportDataset, getChartData } from "../api/datasets";
+import { exportDataset, getChartData, getDataset, updateDatasetMetadata } from "../api/datasets";
 import { useDatasetSchema } from "../hooks/useDatasetSchema";
 import type { ChartConfig, ChartRequest, FilterRule, PlotTrace } from "../types/chart";
-import { Alert, Badge, Button, FieldInput, FieldSelect, Label, Panel, Tooltip } from "../components/ui";
+import type { Dataset, DatasetMetadata } from "../types/dataset";
+import { Alert, Badge, Button, FieldInput, FieldSelect, FieldTextarea, Label, Panel, Tooltip } from "../components/ui";
 import { cxClasses } from "../components/ui-utils";
 
 type Props = {
@@ -57,6 +58,52 @@ type ExportFilterDraft = {
   op: FilterRule["op"];
   value: string;
 };
+
+type MetadataDraft = {
+  driver: string;
+  ride_height: string;
+  aero_configuration: string;
+  testing_notes: string;
+};
+
+type SaveState = "idle" | "saving" | "saved" | "error";
+
+function emptyMetadata(): DatasetMetadata {
+  return {
+    driver: "",
+    ride_height: null,
+    aero_configuration: "",
+    testing_notes: "",
+  };
+}
+
+function draftFromMetadata(metadata: DatasetMetadata | undefined): MetadataDraft {
+  const source = metadata ?? emptyMetadata();
+  return {
+    driver: source.driver,
+    ride_height: source.ride_height === null ? "" : source.ride_height.toFixed(2),
+    aero_configuration: source.aero_configuration,
+    testing_notes: source.testing_notes,
+  };
+}
+
+function metadataFromDraft(draft: MetadataDraft): DatasetMetadata | null {
+  const rideHeight = draft.ride_height.trim();
+  const numericRideHeight = rideHeight === "" ? null : Number(rideHeight);
+  if (numericRideHeight !== null && !Number.isFinite(numericRideHeight)) {
+    return null;
+  }
+  return {
+    driver: draft.driver,
+    ride_height: numericRideHeight === null ? null : Math.round(numericRideHeight * 100) / 100,
+    aero_configuration: draft.aero_configuration,
+    testing_notes: draft.testing_notes,
+  };
+}
+
+function serializeMetadata(metadata: DatasetMetadata): string {
+  return JSON.stringify(metadata);
+}
 
 function emptyGraph(id: number, name = `Graph ${id}`): GraphState {
   return {
@@ -488,6 +535,14 @@ function SortableGraphCard({
 export function DatasetPage({ theme }: Props) {
   const { slug = "" } = useParams();
   const { columns, loading, error } = useDatasetSchema(slug);
+  const [dataset, setDataset] = useState<Dataset | null>(null);
+  const [datasetLoading, setDatasetLoading] = useState(true);
+  const [datasetError, setDatasetError] = useState<string | null>(null);
+  const [metadataDraft, setMetadataDraft] = useState<MetadataDraft>(() => draftFromMetadata(emptyMetadata()));
+  const [metadataPassword, setMetadataPassword] = useState("");
+  const [lastSavedMetadata, setLastSavedMetadata] = useState(() => serializeMetadata(emptyMetadata()));
+  const [metadataSaveState, setMetadataSaveState] = useState<SaveState>("idle");
+  const [metadataSaveError, setMetadataSaveError] = useState<string | null>(null);
   const [nextGraphId, setNextGraphId] = useState(2);
   const [graphs, setGraphs] = useState<GraphState[]>(() => {
     const key = `daq-graphs-${slug}`;
@@ -558,6 +613,8 @@ export function DatasetPage({ theme }: Props) {
   }
 
   const activeGraph = useMemo(() => graphs.find((graph) => graph.id === activeGraphId) ?? null, [graphs, activeGraphId]);
+  const metadataForSave = metadataFromDraft(metadataDraft);
+  const metadataDirty = Boolean(metadataForSave && serializeMetadata(metadataForSave) !== lastSavedMetadata);
 
   function renameGraph(id: number, name: string) {
     setGraphs((prev) => prev.map((graph) => (graph.id === id ? { ...graph, name } : graph)));
@@ -579,6 +636,80 @@ export function DatasetPage({ theme }: Props) {
     setNextGraphId(maxGraphId + 1);
     localStorage.setItem(`daq-graphs-${slug}`, JSON.stringify(graphs.map(graphForStorage)));
   }, [graphs, slug]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setDatasetLoading(true);
+    setDatasetError(null);
+    setDataset(null);
+    setMetadataSaveState("idle");
+    setMetadataSaveError(null);
+
+    getDataset(slug)
+      .then((result) => {
+        if (cancelled) return;
+        const nextDraft = draftFromMetadata(result.metadata);
+        setDataset(result);
+        setMetadataDraft(nextDraft);
+        setLastSavedMetadata(serializeMetadata(metadataFromDraft(nextDraft) ?? emptyMetadata()));
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setDatasetError(err instanceof Error ? err.message : "Failed to load dataset metadata");
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setDatasetLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
+  useEffect(() => {
+    if (!dataset || datasetLoading || datasetError || !metadataPassword) {
+      return;
+    }
+
+    const metadata = metadataFromDraft(metadataDraft);
+    if (!metadata) {
+      setMetadataSaveState("error");
+      setMetadataSaveError("Ride height must be a valid number.");
+      return;
+    }
+
+    const serialized = serializeMetadata(metadata);
+    if (serialized === lastSavedMetadata) {
+      return;
+    }
+
+    let cancelled = false;
+    const timeout = window.setTimeout(() => {
+      setMetadataSaveState("saving");
+      setMetadataSaveError(null);
+      updateDatasetMetadata(slug, metadata, metadataPassword)
+        .then((updated) => {
+          if (cancelled) return;
+          const nextDraft = draftFromMetadata(updated.metadata);
+          setDataset(updated);
+          setMetadataDraft(nextDraft);
+          setLastSavedMetadata(serializeMetadata(metadataFromDraft(nextDraft) ?? emptyMetadata()));
+          setMetadataSaveState("saved");
+        })
+        .catch((err: unknown) => {
+          if (cancelled) return;
+          setMetadataSaveState("error");
+          setMetadataSaveError(err instanceof Error ? err.message : "Failed to save metadata");
+        });
+    }, 600);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+    };
+  }, [dataset, datasetError, datasetLoading, lastSavedMetadata, metadataDraft, metadataPassword, slug]);
 
   const graphGridClass = `grid grid-cols-1 gap-4 ${desktopLayout === "one" ? "lg:grid-cols-1" : "lg:grid-cols-2"}`;
 
@@ -629,6 +760,33 @@ export function DatasetPage({ theme }: Props) {
       );
     }
   }
+
+  function updateMetadataDraft(patch: Partial<MetadataDraft>) {
+    setMetadataDraft((current) => ({ ...current, ...patch }));
+  }
+
+  function normalizeRideHeightDraft() {
+    setMetadataDraft((current) => {
+      const trimmed = current.ride_height.trim();
+      if (trimmed === "") {
+        return { ...current, ride_height: "" };
+      }
+      const value = Number(trimmed);
+      if (!Number.isFinite(value)) {
+        return current;
+      }
+      return { ...current, ride_height: value.toFixed(2) };
+    });
+  }
+
+  const metadataStatus = (() => {
+    if (!metadataForSave) return <Badge tone="danger">Invalid</Badge>;
+    if (metadataDirty && !metadataPassword) return <Badge tone="warning">Password Required</Badge>;
+    if (metadataSaveState === "saving") return <Badge tone="info">Saving</Badge>;
+    if (metadataSaveState === "saved") return <Badge tone="success">Saved</Badge>;
+    if (metadataSaveState === "error") return <Badge tone="danger">Error</Badge>;
+    return <Badge tone="default">Idle</Badge>;
+  })();
 
   return (
     <main className="grid gap-4">
@@ -681,6 +839,70 @@ export function DatasetPage({ theme }: Props) {
             </Button>
           </div>
         </div>
+      </Panel>
+      <Panel className="grid gap-4 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-base font-semibold">Testing Metadata</h3>
+            <p className="text-sm text-muted">{dataset?.title ?? slug}</p>
+          </div>
+          {metadataStatus}
+        </div>
+        {datasetError && <Alert tone="danger">Metadata load failed: {datasetError}</Alert>}
+        <div className="grid gap-3 md:grid-cols-3">
+          <Label className="grid gap-1.5">
+            Upload Password
+            <span className="relative">
+              <LockKeyhole size={14} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-subtle" />
+              <FieldInput
+                type="password"
+                value={metadataPassword}
+                onChange={(event) => setMetadataPassword(event.target.value)}
+                className="pl-9"
+                disabled={datasetLoading}
+                aria-label="Metadata upload password"
+              />
+            </span>
+          </Label>
+          <Label className="grid gap-1.5">
+            Driver
+            <FieldInput
+              type="text"
+              value={metadataDraft.driver}
+              onChange={(event) => updateMetadataDraft({ driver: event.target.value })}
+              disabled={datasetLoading || Boolean(datasetError)}
+            />
+          </Label>
+          <Label className="grid gap-1.5">
+            Ride Height
+            <FieldInput
+              type="number"
+              step="0.01"
+              value={metadataDraft.ride_height}
+              onChange={(event) => updateMetadataDraft({ ride_height: event.target.value })}
+              onBlur={normalizeRideHeightDraft}
+              disabled={datasetLoading || Boolean(datasetError)}
+            />
+          </Label>
+          <Label className="grid gap-1.5 md:col-span-3">
+            Aero Configuration
+            <FieldInput
+              type="text"
+              value={metadataDraft.aero_configuration}
+              onChange={(event) => updateMetadataDraft({ aero_configuration: event.target.value })}
+              disabled={datasetLoading || Boolean(datasetError)}
+            />
+          </Label>
+          <Label className="grid gap-1.5 md:col-span-3">
+            Testing Notes
+            <FieldTextarea
+              value={metadataDraft.testing_notes}
+              onChange={(event) => updateMetadataDraft({ testing_notes: event.target.value })}
+              disabled={datasetLoading || Boolean(datasetError)}
+            />
+          </Label>
+        </div>
+        {metadataSaveError && <Alert tone="danger">{metadataSaveError}</Alert>}
       </Panel>
       {loading && <p className="text-sm text-muted">Loading schema...</p>}
       {error && <Alert tone="danger">Schema load failed: {error}</Alert>}

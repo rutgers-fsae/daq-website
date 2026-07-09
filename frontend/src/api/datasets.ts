@@ -1,11 +1,26 @@
 import { apiFetch, errorMessageFromResponse } from "./client";
 import type { ChartRequest, FilterRule } from "../types/chart";
-import type { Dataset, SchemaColumn } from "../types/dataset";
+import type { Dataset, DatasetMetadata, SchemaColumn } from "../types/dataset";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
 export function listDatasets() {
   return apiFetch<Dataset[]>("/api/datasets");
+}
+
+export function getDataset(slug: string) {
+  return apiFetch<Dataset>(`/api/datasets/${slug}`);
+}
+
+export function updateDatasetMetadata(slug: string, metadata: DatasetMetadata, password: string) {
+  return apiFetch<Dataset>(`/api/datasets/${slug}/metadata`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${password}`,
+    },
+    body: JSON.stringify(metadata),
+  });
 }
 
 export function getSchema(slug: string) {

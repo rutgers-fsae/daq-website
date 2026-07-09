@@ -1,12 +1,13 @@
 import re
 from pathlib import Path
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Depends, Response
 
 from app.config import settings
+from app.core.auth import require_upload_password
 from app.core.errors import bad_request
 from app.models.chart import ChartRequest, ExportRequest, PreviewRequest
-from app.models.dataset import DatasetListItem
+from app.models.dataset import DatasetListItem, DatasetMetadata, DatasetRecord
 from app.services.chart_builder import build_chart_payload
 from app.services.csv_reader import (
     apply_filters,
@@ -30,9 +31,24 @@ def list_datasets() -> list[DatasetListItem]:
             filename=item.filename,
             uploaded_at=item.uploaded_at,
             size_bytes=item.size_bytes,
+            metadata=item.metadata,
         )
         for item in registry.list()
     ]
+
+
+@router.get("/{slug}", response_model=DatasetRecord)
+def get_dataset(slug: str) -> DatasetRecord:
+    return registry.get(slug)
+
+
+@router.patch("/{slug}/metadata", response_model=DatasetRecord)
+def update_dataset_metadata(
+    slug: str,
+    metadata: DatasetMetadata,
+    _: None = Depends(require_upload_password),
+) -> DatasetRecord:
+    return registry.update_metadata(slug, metadata)
 
 
 @router.get("/{slug}/schema")

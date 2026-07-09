@@ -7,7 +7,7 @@ from pathlib import Path
 from app.config import settings
 from app.core.errors import not_found
 from app.core.slug import slugify, unique_slug
-from app.models.dataset import DatasetRecord
+from app.models.dataset import DatasetMetadata, DatasetRecord
 
 
 class DatasetRegistry:
@@ -37,6 +37,17 @@ class DatasetRegistry:
             for record in self._read():
                 if record.slug == slug:
                     return record
+        raise not_found("Dataset not found")
+
+    def update_metadata(self, slug: str, metadata: DatasetMetadata) -> DatasetRecord:
+        with self._lock:
+            records = self._read()
+            for index, record in enumerate(records):
+                if record.slug == slug:
+                    updated = record.model_copy(update={"metadata": metadata})
+                    records[index] = updated
+                    self._write(records)
+                    return updated
         raise not_found("Dataset not found")
 
     def register(self, filename: str, size_bytes: int, original_name: str | None = None) -> DatasetRecord:

@@ -5,6 +5,7 @@ import type {
   LabelHTMLAttributes,
   ReactElement,
   SelectHTMLAttributes,
+  TextareaHTMLAttributes,
 } from "react";
 import { cn } from "@/lib/utils";
 
@@ -80,6 +81,18 @@ export function FieldSelect({ className, ...props }: SelectHTMLAttributes<HTMLSe
     <select
       className={cn(
         "h-9 rounded-md border border-input-border bg-input px-3 text-sm text-text shadow-sm outline-none transition focus:border-button focus:ring-2 focus:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function FieldTextarea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea
+      className={cn(
+        "min-h-32 rounded-md border border-input-border bg-input px-3 py-2 text-sm text-text shadow-sm outline-none transition placeholder:text-subtle focus:border-button focus:ring-2 focus:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}
       {...props}

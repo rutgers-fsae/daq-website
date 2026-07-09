@@ -5,7 +5,13 @@
     "original_name": "May_22_2026_Peter.csv",
     "title": "May_22_2026_Peter",
     "uploaded_at": "2026-06-01T17:28:31.756734Z",
-    "size_bytes": 622134
+    "size_bytes": 622134,
+    "metadata": {
+      "driver": "",
+      "ride_height": null,
+      "aero_configuration": "",
+      "testing_notes": ""
+    }
   },
   {
     "slug": "may-30-2026-peter",
@@ -13,7 +19,13 @@
     "original_name": "May_30_2026_Peter.csv",
     "title": "May_30_2026_Peter",
     "uploaded_at": "2026-06-01T17:28:31.759233Z",
-    "size_bytes": 928192
+    "size_bytes": 928192,
+    "metadata": {
+      "driver": "",
+      "ride_height": null,
+      "aero_configuration": "",
+      "testing_notes": ""
+    }
   },
   {
     "slug": "june-01-2026-neel",
@@ -21,7 +33,13 @@
     "original_name": "June_01_2026_Neel.csv",
     "title": "June_01_2026_Neel",
     "uploaded_at": "2026-06-02T16:16:21.208879Z",
-    "size_bytes": 5432225
+    "size_bytes": 5432225,
+    "metadata": {
+      "driver": "",
+      "ride_height": null,
+      "aero_configuration": "",
+      "testing_notes": ""
+    }
   },
   {
     "slug": "june-01-apps-log",
@@ -29,7 +47,13 @@
     "original_name": "jUNE_01_APPS_LOG.CSV",
     "title": "jUNE_01_APPS_LOG",
     "uploaded_at": "2026-06-02T16:35:46.429101Z",
-    "size_bytes": 324871
+    "size_bytes": 324871,
+    "metadata": {
+      "driver": "",
+      "ride_height": null,
+      "aero_configuration": "",
+      "testing_notes": ""
+    }
   },
   {
     "slug": "june-03-2026-paul",
@@ -37,7 +61,13 @@
     "original_name": "June_03_2026_Paul.csv",
     "title": "June_03_2026_Paul",
     "uploaded_at": "2026-06-06T15:20:04.280796Z",
-    "size_bytes": 19702472
+    "size_bytes": 19702472,
+    "metadata": {
+      "driver": "",
+      "ride_height": null,
+      "aero_configuration": "",
+      "testing_notes": ""
+    }
   },
   {
     "slug": "june-05-2026-neel-50hz",
@@ -45,7 +75,13 @@
     "original_name": "June_05_2026_Neel_50Hz.csv",
     "title": "June_05_2026_Neel_50Hz",
     "uploaded_at": "2026-06-06T15:20:04.281360Z",
-    "size_bytes": 14069850
+    "size_bytes": 14069850,
+    "metadata": {
+      "driver": "",
+      "ride_height": null,
+      "aero_configuration": "",
+      "testing_notes": ""
+    }
   },
   {
     "slug": "june-02-2026-paul",
@@ -53,7 +89,13 @@
     "original_name": "June_02_2026_Paul.csv",
     "title": "June_02_2026_Paul",
     "uploaded_at": "2026-06-06T15:20:04.281745Z",
-    "size_bytes": 7225494
+    "size_bytes": 7225494,
+    "metadata": {
+      "driver": "",
+      "ride_height": null,
+      "aero_configuration": "",
+      "testing_notes": ""
+    }
   },
   {
     "slug": "june-13-2026-peter",
@@ -61,7 +103,13 @@
     "original_name": "June_13_2026_Peter.csv",
     "title": "June_13_2026_Peter",
     "uploaded_at": "2026-06-15T22:37:49.082195Z",
-    "size_bytes": 138526233
+    "size_bytes": 138526233,
+    "metadata": {
+      "driver": "",
+      "ride_height": null,
+      "aero_configuration": "",
+      "testing_notes": ""
+    }
   },
   {
     "slug": "june-16-neel-1",
@@ -69,7 +117,13 @@
     "original_name": "June_16_Neel_1.csv",
     "title": "June_16_Neel_1",
     "uploaded_at": "2026-07-07T15:14:58.519049Z",
-    "size_bytes": 26778111
+    "size_bytes": 26778111,
+    "metadata": {
+      "driver": "",
+      "ride_height": null,
+      "aero_configuration": "",
+      "testing_notes": ""
+    }
   },
   {
     "slug": "june-16-neel-3",
@@ -77,7 +131,13 @@
     "original_name": "June_16_Neel_3.csv",
     "title": "June_16_Neel_3",
     "uploaded_at": "2026-07-07T15:14:58.519169Z",
-    "size_bytes": 9663912
+    "size_bytes": 9663912,
+    "metadata": {
+      "driver": "",
+      "ride_height": null,
+      "aero_configuration": "",
+      "testing_notes": ""
+    }
   },
   {
     "slug": "june-16-neel-2",
@@ -85,7 +145,13 @@
     "original_name": "June_16_Neel_2.csv",
     "title": "June_16_Neel_2",
     "uploaded_at": "2026-07-07T15:14:58.519181Z",
-    "size_bytes": 19107214
+    "size_bytes": 19107214,
+    "metadata": {
+      "driver": "",
+      "ride_height": null,
+      "aero_configuration": "",
+      "testing_notes": ""
+    }
   },
   {
     "slug": "june-15-neel-1",
@@ -93,7 +159,13 @@
     "original_name": "June_15_Neel_1.csv",
     "title": "June_15_Neel_1",
     "uploaded_at": "2026-07-07T15:14:58.519213Z",
-    "size_bytes": 28341735
+    "size_bytes": 28341735,
+    "metadata": {
+      "driver": "",
+      "ride_height": null,
+      "aero_configuration": "",
+      "testing_notes": ""
+    }
   },
   {
     "slug": "june-15-neel-2",
@@ -101,7 +173,13 @@
     "original_name": "June_15_Neel_2.csv",
     "title": "June_15_Neel_2",
     "uploaded_at": "2026-07-07T15:14:58.519220Z",
-    "size_bytes": 4864059
+    "size_bytes": 4864059,
+    "metadata": {
+      "driver": "",
+      "ride_height": null,
+      "aero_configuration": "",
+      "testing_notes": ""
+    }
   },
   {
     "slug": "june-15-neel-3",
@@ -109,7 +187,13 @@
     "original_name": "June_15_Neel_3.csv",
     "title": "June_15_Neel_3",
     "uploaded_at": "2026-07-07T15:14:58.519291Z",
-    "size_bytes": 15412809
+    "size_bytes": 15412809,
+    "metadata": {
+      "driver": "",
+      "ride_height": null,
+      "aero_configuration": "",
+      "testing_notes": ""
+    }
   },
   {
     "slug": "june-15-neel-4",
@@ -117,7 +201,13 @@
     "original_name": "June_15_Neel_4.csv",
     "title": "June_15_Neel_4",
     "uploaded_at": "2026-07-07T15:14:58.519337Z",
-    "size_bytes": 39339625
+    "size_bytes": 39339625,
+    "metadata": {
+      "driver": "",
+      "ride_height": null,
+      "aero_configuration": "",
+      "testing_notes": ""
+    }
   },
   {
     "slug": "june-15-neel-5",
@@ -125,6 +215,12 @@
     "original_name": "June_15_Neel_5.csv",
     "title": "June_15_Neel_5",
     "uploaded_at": "2026-07-07T15:14:58.519345Z",
-    "size_bytes": 13283439
+    "size_bytes": 13283439,
+    "metadata": {
+      "driver": "Neel",
+      "ride_height": null,
+      "aero_configuration": "",
+      "testing_notes": ""
+    }
   }
 ]

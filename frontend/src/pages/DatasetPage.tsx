@@ -18,7 +18,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ArrowLeft, Columns2, Download, Filter, GripVertical, LockKeyhole, Plus, Rows2, Trash2, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, Columns2, Download, Filter, GripVertical, LockKeyhole, Plus, Rows2, Trash2, X } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { ChartBuilder } from "../components/ChartBuilder";
 import { PlotView } from "../components/PlotView";
@@ -27,6 +27,7 @@ import { useDatasetSchema } from "../hooks/useDatasetSchema";
 import type { ChartConfig, ChartRequest, FilterRule, PlotTrace } from "../types/chart";
 import type { Dataset, DatasetMetadata } from "../types/dataset";
 import { Alert, Badge, Button, FieldInput, FieldSelect, FieldTextarea, Label, Panel, Tooltip } from "../components/ui";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../components/ui/collapsible";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "../components/ui/dialog";
 import { cxClasses } from "../components/ui-utils";
 
@@ -549,6 +550,7 @@ export function DatasetPage({ theme }: Props) {
     return stored === "one" || stored === "two" ? stored : "two";
   });
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isMetadataOpen, setIsMetadataOpen] = useState(true);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -827,69 +829,90 @@ export function DatasetPage({ theme }: Props) {
           </div>
         </div>
       </Panel>
-      <Panel className="grid gap-4 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h3 className="text-base font-semibold">Testing Metadata</h3>
-            <p className="text-sm text-muted">{dataset?.title ?? slug}</p>
+      <Panel className="p-4">
+        <Collapsible open={isMetadataOpen} onOpenChange={setIsMetadataOpen} className="grid gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="text-base font-semibold">Testing Metadata</h3>
+              <p className="text-sm text-muted">{dataset?.title ?? slug}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {metadataStatus}
+              <CollapsibleTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`${isMetadataOpen ? "Collapse" : "Expand"} testing metadata`}
+                  aria-controls="testing-metadata-content"
+                >
+                  <ChevronDown
+                    size={16}
+                    aria-hidden="true"
+                    className={`transition-transform ${isMetadataOpen ? "rotate-180" : ""}`}
+                  />
+                </Button>
+              </CollapsibleTrigger>
+            </div>
           </div>
-          {metadataStatus}
-        </div>
-        {datasetError && <Alert tone="danger">Metadata load failed: {datasetError}</Alert>}
-        <div className="grid gap-3 md:grid-cols-3">
-          <Label className="grid gap-1.5">
-            Upload Password
-            <span className="relative">
-              <LockKeyhole size={14} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-subtle" />
-              <FieldInput
-                type="password"
-                value={metadataPassword}
-                onChange={(event) => setMetadataPassword(event.target.value)}
-                className="pl-9"
-                disabled={datasetLoading}
-                aria-label="Metadata upload password"
-              />
-            </span>
-          </Label>
-          <Label className="grid gap-1.5">
-            Driver
-            <FieldInput
-              type="text"
-              value={metadataDraft.driver}
-              onChange={(event) => updateMetadataDraft({ driver: event.target.value })}
-              disabled={datasetLoading || Boolean(datasetError)}
-            />
-          </Label>
-          <Label className="grid gap-1.5">
-            Ride Height
-            <FieldInput
-              type="number"
-              step="0.01"
-              value={metadataDraft.ride_height}
-              onChange={(event) => updateMetadataDraft({ ride_height: event.target.value })}
-              onBlur={normalizeRideHeightDraft}
-              disabled={datasetLoading || Boolean(datasetError)}
-            />
-          </Label>
-          <Label className="grid gap-1.5 md:col-span-3">
-            Aero Configuration
-            <FieldInput
-              type="text"
-              value={metadataDraft.aero_configuration}
-              onChange={(event) => updateMetadataDraft({ aero_configuration: event.target.value })}
-              disabled={datasetLoading || Boolean(datasetError)}
-            />
-          </Label>
-          <Label className="grid gap-1.5 md:col-span-3">
-            Testing Notes
-            <FieldTextarea
-              value={metadataDraft.testing_notes}
-              onChange={(event) => updateMetadataDraft({ testing_notes: event.target.value })}
-              disabled={datasetLoading || Boolean(datasetError)}
-            />
-          </Label>
-        </div>
-        {metadataSaveError && <Alert tone="danger">{metadataSaveError}</Alert>}
+          <CollapsibleContent id="testing-metadata-content" className="grid gap-4">
+            {datasetError && <Alert tone="danger">Metadata load failed: {datasetError}</Alert>}
+            <div className="grid gap-3 md:grid-cols-3">
+              <Label className="grid gap-1.5">
+                Upload Password
+                <span className="relative">
+                  <LockKeyhole size={14} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-subtle" />
+                  <FieldInput
+                    type="password"
+                    value={metadataPassword}
+                    onChange={(event) => setMetadataPassword(event.target.value)}
+                    className="pl-9"
+                    disabled={datasetLoading}
+                    aria-label="Metadata upload password"
+                  />
+                </span>
+              </Label>
+              <Label className="grid gap-1.5">
+                Driver
+                <FieldInput
+                  type="text"
+                  value={metadataDraft.driver}
+                  onChange={(event) => updateMetadataDraft({ driver: event.target.value })}
+                  disabled={datasetLoading || Boolean(datasetError)}
+                />
+              </Label>
+              <Label className="grid gap-1.5">
+                Ride Height
+                <FieldInput
+                  type="number"
+                  step="0.01"
+                  value={metadataDraft.ride_height}
+                  onChange={(event) => updateMetadataDraft({ ride_height: event.target.value })}
+                  onBlur={normalizeRideHeightDraft}
+                  disabled={datasetLoading || Boolean(datasetError)}
+                />
+              </Label>
+              <Label className="grid gap-1.5 md:col-span-3">
+                Aero Configuration
+                <FieldInput
+                  type="text"
+                  value={metadataDraft.aero_configuration}
+                  onChange={(event) => updateMetadataDraft({ aero_configuration: event.target.value })}
+                  disabled={datasetLoading || Boolean(datasetError)}
+                />
+              </Label>
+              <Label className="grid gap-1.5 md:col-span-3">
+                Testing Notes
+                <FieldTextarea
+                  value={metadataDraft.testing_notes}
+                  onChange={(event) => updateMetadataDraft({ testing_notes: event.target.value })}
+                  disabled={datasetLoading || Boolean(datasetError)}
+                />
+              </Label>
+            </div>
+            {metadataSaveError && <Alert tone="danger">{metadataSaveError}</Alert>}
+          </CollapsibleContent>
+        </Collapsible>
       </Panel>
       {loading && <p className="text-sm text-muted">Loading schema...</p>}
       {error && <Alert tone="danger">Schema load failed: {error}</Alert>}

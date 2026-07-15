@@ -133,6 +133,24 @@ describe("DatasetPage", () => {
     expect(screen.getByDisplayValue("Baseline run")).toBeInTheDocument();
   });
 
+  it("collapses and restores the testing metadata fields", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={["/datasets/sample"]}>
+        <Routes>
+          <Route path="/datasets/:slug" element={<DatasetPage theme="light" />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByDisplayValue("Ada")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Collapse testing metadata" }));
+    expect(screen.queryByDisplayValue("Ada")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Expand testing metadata" }));
+    expect(screen.getByDisplayValue("Ada")).toBeInTheDocument();
+  });
+
   it("does not autosave metadata without the upload password", async () => {
     const user = userEvent.setup();
     render(

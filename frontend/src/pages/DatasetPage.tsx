@@ -19,7 +19,6 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { ArrowLeft, Columns2, Download, Filter, GripVertical, LockKeyhole, Plus, Rows2, Trash2, X } from "lucide-react";
-import { createPortal } from "react-dom";
 import { Link, useParams } from "react-router-dom";
 import { ChartBuilder } from "../components/ChartBuilder";
 import { PlotView } from "../components/PlotView";
@@ -28,6 +27,7 @@ import { useDatasetSchema } from "../hooks/useDatasetSchema";
 import type { ChartConfig, ChartRequest, FilterRule, PlotTrace } from "../types/chart";
 import type { Dataset, DatasetMetadata } from "../types/dataset";
 import { Alert, Badge, Button, FieldInput, FieldSelect, FieldTextarea, Label, Panel, Tooltip } from "../components/ui";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "../components/ui/dialog";
 import { cxClasses } from "../components/ui-utils";
 
 type Props = {
@@ -198,10 +198,9 @@ function downloadBlob(blob: Blob, filename: string) {
 type ExportModalProps = {
   slug: string;
   columns: Parameters<typeof ChartBuilder>[0]["columns"];
-  onClose: () => void;
 };
 
-function ExportModal({ slug, columns, onClose }: ExportModalProps) {
+function ExportModal({ slug, columns }: ExportModalProps) {
   const [nextFilterId, setNextFilterId] = useState(2);
   const [filters, setFilters] = useState<ExportFilterDraft[]>(() => [emptyExportFilter(1, columns[0]?.name || "")]);
   const [selectedColumns, setSelectedColumns] = useState<string[]>(() => columns.map((column) => column.name));
@@ -219,17 +218,6 @@ function ExportModal({ slug, columns, onClose }: ExportModalProps) {
       })),
     );
   }, [columns]);
-
-  useEffect(() => {
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    document.addEventListener("keydown", closeOnEscape);
-    return () => document.removeEventListener("keydown", closeOnEscape);
-  }, [onClose]);
 
   function addFilter() {
     setFilters((current) => [...current, emptyExportFilter(nextFilterId, columns[0]?.name || "")]);
@@ -283,31 +271,22 @@ function ExportModal({ slug, columns, onClose }: ExportModalProps) {
 
   const exportDisabled = isExporting || selectedColumns.length === 0 || columns.length === 0;
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[10000] grid place-items-center bg-black/50 p-4"
-      role="presentation"
-      onClick={onClose}
-    >
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="csv-export-title"
-        className="grid max-h-[calc(100vh-2rem)] w-full max-w-4xl overflow-hidden rounded-lg border border-border bg-panel shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
-      >
+  return (
+      <DialogContent className="max-w-4xl" aria-describedby="csv-export-description">
         <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <Filter size={16} aria-hidden="true" className="text-button" />
-              <h3 id="csv-export-title" className="text-sm font-semibold uppercase tracking-[0.16em] text-muted">CSV Export</h3>
+              <DialogTitle className="text-sm uppercase tracking-[0.16em] text-muted">CSV Export</DialogTitle>
             </div>
-            <p className="mt-1 text-sm text-muted">Select columns and filters for this download.</p>
+            <DialogDescription id="csv-export-description" className="mt-1">Select columns and filters for this download.</DialogDescription>
           </div>
           <Tooltip label="Close export modal">
-            <Button type="button" onClick={onClose} variant="ghost" size="icon" aria-label="Close export modal">
-              <X size={16} aria-hidden="true" />
-            </Button>
+            <DialogClose asChild>
+              <Button type="button" variant="ghost" size="icon" aria-label="Close export modal">
+                <X size={16} aria-hidden="true" />
+              </Button>
+            </DialogClose>
           </Tooltip>
         </div>
         <div className="grid gap-4 overflow-y-auto p-4">
@@ -412,17 +391,15 @@ function ExportModal({ slug, columns, onClose }: ExportModalProps) {
           </section>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border px-4 py-3">
-          <Button type="button" onClick={onClose} variant="ghost">
-            Cancel
-          </Button>
+          <DialogClose asChild>
+            <Button type="button" variant="ghost">Cancel</Button>
+          </DialogClose>
           <Button type="button" onClick={handleExport} disabled={exportDisabled} variant="primary">
             <Download size={15} aria-hidden="true" />
             {isExporting ? "Exporting..." : "Export CSV"}
           </Button>
         </div>
-      </section>
-    </div>,
-    document.body,
+      </DialogContent>
   );
 }
 
@@ -802,14 +779,17 @@ export function DatasetPage({ theme }: Props) {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            onClick={() => setIsExportModalOpen(true)}
-            variant="secondary"
-          >
-            <Download size={15} aria-hidden="true" />
-            Download CSV
-          </Button>
+          <Dialog open={isExportModalOpen} onOpenChange={setIsExportModalOpen}>
+            <DialogTrigger asChild>
+              <Button type="button" variant="secondary">
+                <Download size={15} aria-hidden="true" />
+                Download CSV
+              </Button>
+            </DialogTrigger>
+            {isExportModalOpen && !loading && !error && (
+              <ExportModal slug={slug} columns={columns} />
+            )}
+          </Dialog>
           <Button
             type="button"
             onClick={addGraph}
@@ -906,9 +886,6 @@ export function DatasetPage({ theme }: Props) {
       </Panel>
       {loading && <p className="text-sm text-muted">Loading schema...</p>}
       {error && <Alert tone="danger">Schema load failed: {error}</Alert>}
-      {isExportModalOpen && !loading && !error && (
-        <ExportModal slug={slug} columns={columns} onClose={() => setIsExportModalOpen(false)} />
-      )}
       {!loading && !error && (
         <DndContext
           sensors={sensors}

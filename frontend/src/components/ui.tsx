@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import type {
   ButtonHTMLAttributes,
   HTMLAttributes,
@@ -37,7 +38,10 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   size?: "sm" | "md" | "icon";
 };
 
-export function Button({ className, variant = "secondary", size = "md", ...props }: ButtonProps) {
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  { className, variant = "secondary", size = "md", ...props },
+  ref,
+) {
   const variantClass = {
     primary: "border-transparent bg-button text-button-text shadow-sm hover:bg-button-hover",
     secondary: "border-input-border bg-input text-text shadow-sm hover:border-button hover:bg-surface-soft",
@@ -53,6 +57,7 @@ export function Button({ className, variant = "secondary", size = "md", ...props
 
   return (
     <button
+      ref={ref}
       className={cn(
         "inline-flex shrink-0 items-center justify-center gap-2 rounded-md border font-medium transition focus:outline-none focus:ring-2 focus:ring-ring/40 focus:ring-offset-2 focus:ring-offset-[var(--bg)] disabled:pointer-events-none disabled:opacity-50",
         variantClass,
@@ -62,7 +67,7 @@ export function Button({ className, variant = "secondary", size = "md", ...props
       {...props}
     />
   );
-}
+});
 
 export function FieldInput({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return (

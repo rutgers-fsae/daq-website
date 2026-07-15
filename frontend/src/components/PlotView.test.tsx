@@ -8,6 +8,7 @@ const plotState = vi.hoisted(() => ({
     data: Array<Record<string, unknown>>;
     layout: Record<string, unknown>;
     onError?: (error: Error) => void;
+    onRelayout?: (event: Record<string, unknown>) => void;
   },
 }));
 
@@ -95,6 +96,54 @@ describe("PlotView", () => {
     const colorway = plotState.lastProps?.layout.colorway;
     expect(colorway).toEqual(expect.any(Array));
     expect((colorway as string[])[1]).not.toBe("#111111");
+  });
+
+  it("updates the statistics overlay when the viewport changes", async () => {
+    render(
+      <PlotView
+        data={[{ ...baseTrace, x: [0, 1, 2], y: [10, 20, 30] }]}
+        theme="light"
+        axisTitles={null}
+      />,
+    );
+
+    await screen.findByTestId("plot");
+    expect(screen.getByRole("table", { name: "Visible range statistics" })).toHaveTextContent("20");
+
+    act(() => {
+      plotState.lastProps?.onRelayout?.({
+        "xaxis.range[0]": 1,
+        "xaxis.range[1]": 2,
+        "yaxis.range[0]": 25,
+        "yaxis.range[1]": 35,
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("table", { name: "Visible range statistics" })).toHaveTextContent("30");
+    });
+    expect(screen.getByRole("table", { name: "Visible range statistics" })).not.toHaveTextContent("20");
+
+    act(() => {
+      plotState.lastProps?.onRelayout?.({ "xaxis.autorange": true, "yaxis.autorange": true });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("table", { name: "Visible range statistics" })).toHaveTextContent("20");
+    });
+  });
+
+  it("does not show viewport statistics for unsupported chart types", async () => {
+    render(
+      <PlotView
+        data={[{ name: "Speed", x: [0, 1], y: [10, 20], type: "bar" }]}
+        theme="light"
+        axisTitles={null}
+      />,
+    );
+
+    await screen.findByTestId("plot");
+    expect(screen.queryByRole("table", { name: "Visible range statistics" })).not.toBeInTheDocument();
   });
 
   it("shows Plotly render errors instead of a blank plot", async () => {

@@ -272,7 +272,14 @@ function ExportModal({ slug, columns }: ExportModalProps) {
   const exportDisabled = isExporting || selectedColumns.length === 0 || columns.length === 0;
 
   return (
-      <DialogContent className="max-w-4xl" aria-describedby="csv-export-description">
+      <DialogContent
+        className="max-w-4xl"
+        aria-describedby="csv-export-description"
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          (event.currentTarget as HTMLElement | null)?.focus();
+        }}
+      >
         <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">

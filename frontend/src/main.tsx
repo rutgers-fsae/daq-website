@@ -2,12 +2,15 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
+import { TooltipProvider } from "./components/ui/tooltip";
 import "./styles/globals.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    <TooltipProvider delayDuration={350} skipDelayDuration={100}>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </TooltipProvider>
   </React.StrictMode>,
 );

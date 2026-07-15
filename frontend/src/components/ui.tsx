@@ -9,6 +9,7 @@ import type {
   TextareaHTMLAttributes,
 } from "react";
 import { cn } from "@/lib/utils";
+import { TooltipContent, TooltipRoot, TooltipTrigger } from "./ui/tooltip";
 
 type Tone = "default" | "danger" | "warning" | "info" | "success";
 
@@ -131,9 +132,10 @@ export function Separator({ className, ...props }: HTMLAttributes<HTMLDivElement
 
 export function Tooltip({ label, children }: { label: string; children: ReactElement }) {
   return (
-    <span className="inline-flex" title={label}>
-      {children}
-    </span>
+    <TooltipRoot>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </TooltipRoot>
   );
 }
 

@@ -1,8 +1,9 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useDatasets } from "../hooks/useDatasets";
 import { DatasetListPage } from "./DatasetListPage";
+import { render } from "../test/render";
 
 vi.mock("../hooks/useDatasets", () => ({
   useDatasets: vi.fn(),

@@ -49,6 +49,9 @@ export function PlotView({ data, theme, axisTitles }: Props) {
   const colors = dark
     ? { paper: "#0d0d0f", plot: "#09090b", text: "#f7f7f7", grid: "#2a2a2f", zero: "#4a4a52" }
     : { paper: "#ffffff", plot: "#f7f7f8", text: "#111111", grid: "#dedfe3", zero: "#aeb1b8" };
+  const colorway = dark
+    ? ["#ff3b5f", "#38bdf8", "#a78bfa", "#fbbf24", "#34d399", "#fb7185", "#60a5fa"]
+    : ["#fd0127", "#111111", "#6b7280", "#ef4444", "#f97316", "#2563eb", "#16a34a"];
   const traceLabels = axisTitles?.traceLabels || {};
   const traceAxisByColumn = axisTitles?.traceAxisByColumn || {};
   const labeledData = data.map((trace) => {
@@ -83,7 +86,7 @@ export function PlotView({ data, theme, axisTitles }: Props) {
       : {}),
     paper_bgcolor: colors.paper,
     plot_bgcolor: colors.plot,
-    colorway: ["#fd0127", "#111111", "#6b7280", "#ef4444", "#f97316", "#2563eb", "#16a34a"],
+    colorway,
     font: { color: colors.text, family: "Inter, ui-sans-serif, system-ui, sans-serif" },
   };
 

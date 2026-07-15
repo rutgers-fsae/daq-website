@@ -78,6 +78,25 @@ describe("PlotView", () => {
     );
   });
 
+  it("uses a visible second trace color in dark mode", async () => {
+    render(
+      <PlotView
+        data={[
+          baseTrace,
+          { ...baseTrace, name: "Voltage", y: [300, 310] },
+        ]}
+        theme="dark"
+        axisTitles={null}
+      />,
+    );
+
+    await screen.findByTestId("plot");
+
+    const colorway = plotState.lastProps?.layout.colorway;
+    expect(colorway).toEqual(expect.any(Array));
+    expect((colorway as string[])[1]).not.toBe("#111111");
+  });
+
   it("shows Plotly render errors instead of a blank plot", async () => {
     render(<PlotView data={[baseTrace]} theme="light" axisTitles={null} />);
 

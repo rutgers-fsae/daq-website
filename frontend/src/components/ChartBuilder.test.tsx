@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ChartBuilder } from "./ChartBuilder";
@@ -17,7 +17,7 @@ describe("ChartBuilder", () => {
     render(<ChartBuilder columns={columns} onRun={onRun} />);
 
     await user.click(screen.getByRole("button", { name: /select x axis/i }));
-    await user.click(screen.getByRole("button", { name: "Time (s)" }));
+    await user.click(within(screen.getByRole("listbox")).getByRole("option", { name: "Time (s)" }));
     await user.click(screen.getByRole("button", { name: /select y series/i }));
     await user.click(screen.getByRole("checkbox", { name: "Speed (mph)" }));
     await user.click(screen.getByRole("button", { name: "Render" }));
@@ -37,7 +37,7 @@ describe("ChartBuilder", () => {
     render(<ChartBuilder columns={columns} onRun={onRun} />);
 
     await user.click(screen.getByRole("button", { name: /select x axis/i }));
-    await user.click(screen.getByRole("button", { name: "Driver" }));
+    await user.click(within(screen.getByRole("listbox")).getByRole("option", { name: "Driver" }));
     await user.click(screen.getByRole("button", { name: /select y series/i }));
     await user.click(screen.getByRole("checkbox", { name: "Speed (mph)" }));
     await user.type(screen.getByRole("spinbutton", { name: "Time filter start" }), "10");
@@ -66,5 +66,23 @@ describe("ChartBuilder", () => {
 
     expect(screen.getByText("This dataset has no numeric columns to plot.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Render" })).toBeDisabled();
+  });
+
+  it("searches available X and Y channels", async () => {
+    const user = userEvent.setup();
+    render(<ChartBuilder columns={columns} onRun={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: /select x axis/i }));
+    await user.type(screen.getByPlaceholderText("Search X channels..."), "driver");
+    const xOptions = within(screen.getByRole("listbox"));
+    expect(xOptions.getByRole("option", { name: "Driver" })).toBeInTheDocument();
+    expect(xOptions.queryByRole("option", { name: "Time (s)" })).not.toBeInTheDocument();
+    await user.click(xOptions.getByRole("option", { name: "Driver" }));
+
+    await user.click(screen.getByRole("button", { name: /select y series/i }));
+    await user.type(screen.getByPlaceholderText("Search Y channels..."), "speed");
+    const yOptions = within(screen.getByRole("listbox"));
+    expect(yOptions.getByRole("option", { name: /speed/i })).toBeInTheDocument();
+    expect(yOptions.queryByText("Time (s)")).not.toBeInTheDocument();
   });
 });

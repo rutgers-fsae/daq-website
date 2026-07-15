@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Play, X } from "lucide-react";
 import type { SchemaColumn } from "../types/dataset";
 import type { ChartConfig, ChartRequest, FilterRule } from "../types/chart";
 import { Alert, Badge, Button, FieldInput, FieldSelect, Label, Panel } from "./ui";
-import { cxClasses } from "./ui-utils";
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "./ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 
 type Props = {
   columns: SchemaColumn[];
@@ -20,12 +20,6 @@ type Props = {
       traceAxisByColumn: Record<string, "y" | "y2">;
     },
   ) => void;
-};
-
-type DropdownPosition = {
-  top: number;
-  left: number;
-  width: number;
 };
 
 const defaultConfig: ChartConfig = { chart_type: "line", y_columns: [], filters: [] };
@@ -63,14 +57,6 @@ export function ChartBuilder({ columns, config = defaultConfig, onConfigChange, 
   const [endTime, setEndTime] = useState(initialTimeFilter.endTime);
   const [isXDropdownOpen, setIsXDropdownOpen] = useState(false);
   const [isYDropdownOpen, setIsYDropdownOpen] = useState(false);
-  const xDropdownRef = useRef<HTMLDivElement | null>(null);
-  const yDropdownRef = useRef<HTMLDivElement | null>(null);
-  const xButtonRef = useRef<HTMLButtonElement | null>(null);
-  const yButtonRef = useRef<HTMLButtonElement | null>(null);
-  const xPanelRef = useRef<HTMLDivElement | null>(null);
-  const yPanelRef = useRef<HTMLDivElement | null>(null);
-  const [xDropdownPosition, setXDropdownPosition] = useState<DropdownPosition | null>(null);
-  const [yDropdownPosition, setYDropdownPosition] = useState<DropdownPosition | null>(null);
 
   const numericColumns = useMemo(() => columns.filter((col) => col.type === "numeric"), [columns]);
   const timeColumns = useMemo(() => columns.filter(isTimeColumn), [columns]);
@@ -111,79 +97,6 @@ export function ChartBuilder({ columns, config = defaultConfig, onConfigChange, 
       return timeColumns[0]?.name || "";
     });
   }, [columns, timeColumns]);
-
-  useEffect(() => {
-    function closeOnOutsideClick(event: MouseEvent) {
-      const target = event.target as Node;
-      if (
-        xDropdownRef.current &&
-        !xDropdownRef.current.contains(target) &&
-        xPanelRef.current &&
-        !xPanelRef.current.contains(target)
-      ) {
-        setIsXDropdownOpen(false);
-      }
-      if (
-        yDropdownRef.current &&
-        !yDropdownRef.current.contains(target) &&
-        yPanelRef.current &&
-        !yPanelRef.current.contains(target)
-      ) {
-        setIsYDropdownOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", closeOnOutsideClick);
-    return () => document.removeEventListener("mousedown", closeOnOutsideClick);
-  }, []);
-
-  useEffect(() => {
-    function updateDropdownPositions() {
-      if (isXDropdownOpen) {
-        setXDropdownPosition(positionForButton(xButtonRef.current));
-      }
-      if (isYDropdownOpen) {
-        setYDropdownPosition(positionForButton(yButtonRef.current));
-      }
-    }
-
-    window.addEventListener("resize", updateDropdownPositions);
-    window.addEventListener("scroll", updateDropdownPositions, true);
-    return () => {
-      window.removeEventListener("resize", updateDropdownPositions);
-      window.removeEventListener("scroll", updateDropdownPositions, true);
-    };
-  }, [isXDropdownOpen, isYDropdownOpen]);
-
-  function positionForButton(button: HTMLButtonElement | null): DropdownPosition | null {
-    if (!button) return null;
-    const rect = button.getBoundingClientRect();
-    return {
-      top: rect.bottom + 8,
-      left: rect.left,
-      width: rect.width,
-    };
-  }
-
-  function toggleXDropdown() {
-    setIsXDropdownOpen((open) => {
-      const next = !open;
-      if (next) {
-        setXDropdownPosition(positionForButton(xButtonRef.current));
-      }
-      return next;
-    });
-  }
-
-  function toggleYDropdown() {
-    setIsYDropdownOpen((open) => {
-      const next = !open;
-      if (next) {
-        setYDropdownPosition(positionForButton(yButtonRef.current));
-      }
-      return next;
-    });
-  }
 
   function columnLabel(columnName: string) {
     const column = columns.find((item) => item.name === columnName);
@@ -251,102 +164,101 @@ export function ChartBuilder({ columns, config = defaultConfig, onConfigChange, 
       <div className="grid gap-2 md:grid-cols-2">
         <Label className="grid gap-1.5">
           X Axis
-          <div ref={xDropdownRef} className="relative">
-            <button
-              ref={xButtonRef}
-              type="button"
-              onClick={toggleXDropdown}
-              className="flex h-9 w-full items-center justify-between rounded-md border border-input-border bg-input px-3 text-left text-sm font-normal text-text shadow-sm transition hover:border-button focus:outline-none focus:ring-2 focus:ring-ring/30"
-              aria-label={xDropdownLabel}
-              aria-expanded={isXDropdownOpen}
-            >
-              <span className="truncate normal-case tracking-normal">{xDropdownLabel}</span>
-              <ChevronDown size={15} aria-hidden="true" className="shrink-0 text-muted" />
-            </button>
-            {isXDropdownOpen && xDropdownPosition && createPortal(
-              <div
-                ref={xPanelRef}
-                style={{ top: xDropdownPosition.top, left: xDropdownPosition.left, width: xDropdownPosition.width }}
-                className="fixed z-[9999] grid max-h-64 gap-1 overflow-y-auto rounded-md border border-border bg-panel p-2 shadow-2xl"
+          <Popover open={isXDropdownOpen} onOpenChange={setIsXDropdownOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="flex h-9 w-full items-center justify-between rounded-md border border-input-border bg-input px-3 text-left text-sm font-normal text-text shadow-sm transition hover:border-button focus:outline-none focus:ring-2 focus:ring-ring/30"
+                aria-label={xDropdownLabel}
               >
-                <button
-                  type="button"
-                  onClick={() => {
-                    setXColumn("");
-                    setIsXDropdownOpen(false);
-                  }}
-                  className="rounded-md px-2 py-1.5 text-left text-sm text-muted transition hover:bg-surface-soft hover:text-text"
-                >
-                  Use row index
-                </button>
-                {columns.map((col) => (
-                  <button
-                    key={col.name}
-                    type="button"
-                    onClick={() => {
-                      setXColumn(col.name);
+                <span className="truncate normal-case tracking-normal">{xDropdownLabel}</span>
+                <ChevronDown size={15} aria-hidden="true" className="shrink-0 text-muted" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent>
+              <Command label="X axis channels">
+                <CommandInput placeholder="Search X channels..." aria-label="Search X channels" />
+                <CommandList>
+                  <CommandEmpty>No channels found.</CommandEmpty>
+                  <CommandItem
+                    value="Use row index"
+                    onSelect={() => {
+                      setXColumn("");
                       setIsXDropdownOpen(false);
                     }}
-                    className={cxClasses(
-                      "rounded-md px-2 py-1.5 text-left text-sm transition hover:bg-surface-soft hover:text-text",
-                      xColumn === col.name ? "bg-surface-soft font-medium text-text" : "text-text",
-                    )}
+                    className={!xColumn ? "font-medium" : "text-muted"}
                   >
-                    {col.display_name || col.name}
-                  </button>
-                ))}
-              </div>,
-              document.body,
-            )}
-          </div>
+                    Use row index
+                  </CommandItem>
+                  {columns.map((col) => (
+                    <CommandItem
+                      key={col.name}
+                      value={`${col.display_name || col.name} ${col.name}`}
+                      onSelect={() => {
+                        setXColumn(col.name);
+                        setIsXDropdownOpen(false);
+                      }}
+                      className={xColumn === col.name ? "font-medium" : undefined}
+                    >
+                      {col.display_name || col.name}
+                    </CommandItem>
+                  ))}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </Label>
         <Label className="grid gap-1.5">
           Y Series
-          <div ref={yDropdownRef} className="relative">
-            <button
-              ref={yButtonRef}
-              type="button"
-              onClick={toggleYDropdown}
-              className="flex h-9 w-full items-center justify-between rounded-md border border-input-border bg-input px-3 text-left text-sm font-normal text-text shadow-sm transition hover:border-button focus:outline-none focus:ring-2 focus:ring-ring/30"
-              aria-label={yDropdownLabel}
-              aria-expanded={isYDropdownOpen}
-            >
-              <span className="truncate normal-case tracking-normal">{yDropdownLabel}</span>
-              <ChevronDown size={15} aria-hidden="true" className="shrink-0 text-muted" />
-            </button>
-            {isYDropdownOpen && yDropdownPosition && createPortal(
-              <div
-                ref={yPanelRef}
-                style={{ top: yDropdownPosition.top, left: yDropdownPosition.left, width: yDropdownPosition.width }}
-                className="fixed z-[9999] grid max-h-64 gap-1 overflow-y-auto rounded-md border border-border bg-panel p-2 shadow-2xl"
+          <Popover open={isYDropdownOpen} onOpenChange={setIsYDropdownOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="flex h-9 w-full items-center justify-between rounded-md border border-input-border bg-input px-3 text-left text-sm font-normal text-text shadow-sm transition hover:border-button focus:outline-none focus:ring-2 focus:ring-ring/30"
+                aria-label={yDropdownLabel}
               >
-                <div className="mb-1 flex items-center justify-between gap-2">
-                  <p className="text-sm font-medium text-text">Y Axis Series</p>
-                  {yColumns.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setYColumns([])}
-                      className="rounded-md px-2 py-1 text-xs text-muted transition hover:bg-surface-soft hover:text-text"
+                <span className="truncate normal-case tracking-normal">{yDropdownLabel}</span>
+                <ChevronDown size={15} aria-hidden="true" className="shrink-0 text-muted" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent>
+              <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
+                <p className="text-sm font-medium text-text">Y Axis Series</p>
+                {yColumns.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setYColumns([])}
+                    className="rounded-md px-2 py-1 text-xs text-muted transition hover:bg-surface-soft hover:text-text"
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
+              <Command label="Y axis channels">
+                <CommandInput placeholder="Search Y channels..." aria-label="Search Y channels" />
+                <CommandList>
+                  <CommandEmpty>No numeric channels found.</CommandEmpty>
+                  {numericColumns.map((col) => (
+                    <CommandItem
+                      key={col.name}
+                      value={`${col.display_name || col.name} ${col.name}`}
+                      onSelect={() => toggleYColumn(col.name)}
                     >
-                      Clear all
-                    </button>
-                  )}
-                </div>
-                {numericColumns.map((col) => (
-                  <label key={col.name} className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-text hover:bg-surface-soft">
-                    <input
-                      type="checkbox"
-                      checked={yColumns.includes(col.name)}
-                      onChange={() => toggleYColumn(col.name)}
-                      className="h-4 w-4 accent-button"
-                    />
-                    <span>{col.display_name || col.name}</span>
-                  </label>
-                ))}
-              </div>,
-              document.body,
-            )}
-          </div>
+                      <input
+                        type="checkbox"
+                        checked={yColumns.includes(col.name)}
+                        onChange={() => toggleYColumn(col.name)}
+                        onClick={(event) => event.stopPropagation()}
+                        className="mr-2 h-4 w-4 shrink-0 accent-button"
+                        aria-label={col.display_name || col.name}
+                      />
+                      <span className="truncate">{col.display_name || col.name}</span>
+                    </CommandItem>
+                  ))}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </Label>
       </div>
       {yColumns.length > 0 && (

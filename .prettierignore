@@ -1,0 +1,7 @@
+**/node_modules/
+**/.venv/
+**/dist/
+**/coverage/
+data/
+backend/app/storage/
+backend/storage/

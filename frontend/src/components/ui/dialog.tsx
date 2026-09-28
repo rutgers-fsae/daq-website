@@ -6,7 +6,10 @@ export const Dialog = DialogPrimitive.Root;
 export const DialogTrigger = DialogPrimitive.Trigger;
 export const DialogClose = DialogPrimitive.Close;
 
-export function DialogContent({ className, ...props }: ComponentProps<typeof DialogPrimitive.Content>) {
+export function DialogContent({
+  className,
+  ...props
+}: ComponentProps<typeof DialogPrimitive.Content>) {
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="fixed inset-0 z-[10000] bg-black/50" />
@@ -21,10 +24,26 @@ export function DialogContent({ className, ...props }: ComponentProps<typeof Dia
   );
 }
 
-export function DialogTitle({ className, ...props }: ComponentProps<typeof DialogPrimitive.Title>) {
-  return <DialogPrimitive.Title className={cn("font-semibold text-text", className)} {...props} />;
+export function DialogTitle({
+  className,
+  ...props
+}: ComponentProps<typeof DialogPrimitive.Title>) {
+  return (
+    <DialogPrimitive.Title
+      className={cn("font-semibold text-text", className)}
+      {...props}
+    />
+  );
 }
 
-export function DialogDescription({ className, ...props }: ComponentProps<typeof DialogPrimitive.Description>) {
-  return <DialogPrimitive.Description className={cn("text-sm text-muted", className)} {...props} />;
+export function DialogDescription({
+  className,
+  ...props
+}: ComponentProps<typeof DialogPrimitive.Description>) {
+  return (
+    <DialogPrimitive.Description
+      className={cn("text-sm text-muted", className)}
+      {...props}
+    />
+  );
 }

@@ -14,7 +14,9 @@ export function useDatasetSchema(slug: string) {
       .then((result) => setColumns(result.columns))
       .catch((err: unknown) => {
         setColumns([]);
-        setError(err instanceof Error ? err.message : "Failed to load dataset schema");
+        setError(
+          err instanceof Error ? err.message : "Failed to load dataset schema",
+        );
       })
       .finally(() => setLoading(false));
   }, [slug]);

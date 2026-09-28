@@ -8,7 +8,9 @@ declare module "react-plotly.js" {
 declare module "react-plotly.js/factory" {
   import type { ComponentType } from "react";
 
-  export default function createPlotlyComponent(plotly: unknown): ComponentType<Record<string, unknown>>;
+  export default function createPlotlyComponent(
+    plotly: unknown,
+  ): ComponentType<Record<string, unknown>>;
 }
 
 declare module "plotly.js-cartesian-dist-min" {

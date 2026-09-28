@@ -1,7 +1,7 @@
 import csv
+import re
 from functools import lru_cache
 from pathlib import Path
-import re
 from typing import Iterable
 
 import pandas as pd
@@ -27,15 +27,21 @@ def read_dataset(slug: str, columns: Iterable[str] | None = None) -> pd.DataFram
     return frame
 
 
-def read_dataset_with_units(slug: str, columns: Iterable[str] | None = None) -> tuple[pd.DataFrame, dict[str, str | None]]:
+def read_dataset_with_units(
+    slug: str, columns: Iterable[str] | None = None
+) -> tuple[pd.DataFrame, dict[str, str | None]]:
     path = dataset_path_for_slug(slug)
     stat = path.stat()
     columns_key = tuple(sorted(set(columns))) if columns else None
-    frame, units = _read_dataset_cached(str(path), stat.st_mtime_ns, stat.st_size, columns_key)
+    frame, units = _read_dataset_cached(
+        str(path), stat.st_mtime_ns, stat.st_size, columns_key
+    )
     return frame.copy(deep=False), dict(units)
 
 
-def read_dataset_sample_with_units(slug: str, sample_rows: int = 100) -> tuple[pd.DataFrame, dict[str, str | None], int]:
+def read_dataset_sample_with_units(
+    slug: str, sample_rows: int = 100
+) -> tuple[pd.DataFrame, dict[str, str | None], int]:
     path = dataset_path_for_slug(slug)
     if _is_motec_csv(path):
         frame, units = _read_motec_csv(path, nrows=sample_rows)
@@ -78,7 +84,9 @@ def _read_dataset_cached(
     return frame, units
 
 
-def _read_regular_csv(path: Path, columns: set[str] | None = None, nrows: int | None = None) -> pd.DataFrame:
+def _read_regular_csv(
+    path: Path, columns: set[str] | None = None, nrows: int | None = None
+) -> pd.DataFrame:
     kwargs = _read_csv_kwargs(columns, nrows)
     try:
         return pd.read_csv(path, **kwargs)
@@ -102,7 +110,9 @@ def _read_motec_csv(
         frame = pd.read_csv(path, skiprows=skiprows, **kwargs)
     except ParserError:
         try:
-            frame = pd.read_csv(path, skiprows=skiprows, engine="python", on_bad_lines="skip", **kwargs)
+            frame = pd.read_csv(
+                path, skiprows=skiprows, engine="python", on_bad_lines="skip", **kwargs
+            )
         except Exception as exc:
             raise bad_request(f"Unable to parse CSV: {exc}") from exc
     except Exception as exc:
@@ -159,7 +169,9 @@ def _parquet_sidecar_path(path: Path) -> Path:
     return path.with_suffix(f"{path.suffix}.parquet")
 
 
-def _read_parquet_sidecar(path: Path, columns: set[str] | None = None) -> pd.DataFrame | None:
+def _read_parquet_sidecar(
+    path: Path, columns: set[str] | None = None
+) -> pd.DataFrame | None:
     sidecar = _parquet_sidecar_path(path)
     if not sidecar.exists() or sidecar.stat().st_mtime_ns < path.stat().st_mtime_ns:
         return None
@@ -214,7 +226,9 @@ def _row_count_for_path(path: Path) -> int:
         raise bad_request(f"Unable to parse CSV: {exc}") from exc
 
 
-def _units_map_for_columns(columns: list[str], header_row: list[str], raw_units: list[str]) -> dict[str, str | None]:
+def _units_map_for_columns(
+    columns: list[str], header_row: list[str], raw_units: list[str]
+) -> dict[str, str | None]:
     raw_units_by_column = {
         column: raw_units[index].strip().strip('"') if index < len(raw_units) else ""
         for index, column in enumerate(header_row)

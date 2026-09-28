@@ -14,7 +14,9 @@ export function useDatasets() {
       .then(setDatasets)
       .catch((err: unknown) => {
         setDatasets([]);
-        setError(err instanceof Error ? err.message : "Failed to load datasets");
+        setError(
+          err instanceof Error ? err.message : "Failed to load datasets",
+        );
       })
       .finally(() => setLoading(false));
   }

@@ -78,7 +78,13 @@ def chart_data(slug: str, payload: ChartRequest) -> dict:
     df = read_dataset(slug, requested_columns)
     _validate_requested_columns(df.columns, requested_columns)
     filtered = apply_filters(df, filters)
-    return build_chart_payload(filtered, payload.chart_type, payload.x_column, payload.y_columns, payload.group_by)
+    return build_chart_payload(
+        filtered,
+        payload.chart_type,
+        payload.x_column,
+        payload.y_columns,
+        payload.group_by,
+    )
 
 
 @router.get("/{slug}/download")
@@ -88,14 +94,20 @@ def download_dataset(slug: str) -> Response:
 
 @router.post("/{slug}/download")
 def download_filtered_dataset(slug: str, payload: ExportRequest) -> Response:
-    return _download_dataset(slug, [rule.model_dump() for rule in payload.filters], payload.columns)
+    return _download_dataset(
+        slug, [rule.model_dump() for rule in payload.filters], payload.columns
+    )
 
 
-def _download_dataset(slug: str, filters: list[dict], columns: list[str] | None) -> Response:
+def _download_dataset(
+    slug: str, filters: list[dict], columns: list[str] | None
+) -> Response:
     record = registry.get(slug)
     df = read_dataset(slug)
     _validate_filter_columns(df.columns, filters)
-    _validate_requested_columns(df.columns, set(columns) if columns is not None else None)
+    _validate_requested_columns(
+        df.columns, set(columns) if columns is not None else None
+    )
     if filters:
         df = apply_filters(df, filters)
     if columns is not None:
@@ -128,7 +140,9 @@ def _columns_for_chart(payload: ChartRequest, filters: list[dict]) -> set[str] |
     return columns or None
 
 
-def _validate_requested_columns(available_columns, requested_columns: set[str] | None) -> None:
+def _validate_requested_columns(
+    available_columns, requested_columns: set[str] | None
+) -> None:
     if not requested_columns:
         return
     missing = sorted(requested_columns - set(available_columns))
@@ -142,7 +156,8 @@ def _validate_filter_columns(available_columns, filters: list[dict]) -> None:
         {
             column
             for rule in filters
-            if isinstance((column := rule.get("column")), str) and column not in available
+            if isinstance((column := rule.get("column")), str)
+            and column not in available
         }
     )
     if missing:

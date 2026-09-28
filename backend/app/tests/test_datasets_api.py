@@ -4,10 +4,9 @@ from fastapi.testclient import TestClient
 
 from app.config import settings
 from app.main import app
-from app.services.dataset_registry import registry
 from app.services import csv_reader
 from app.services.csv_reader import _read_motec_csv, read_dataset
-
+from app.services.dataset_registry import registry
 
 client = TestClient(app)
 
@@ -53,7 +52,12 @@ def test_update_dataset_metadata_requires_upload_password():
 
     response = client.patch(
         f"/api/datasets/{record.slug}/metadata",
-        json={"driver": "Ada", "ride_height": 12.34, "aero_configuration": "Sprint", "testing_notes": "Baseline"},
+        json={
+            "driver": "Ada",
+            "ride_height": 12.34,
+            "aero_configuration": "Sprint",
+            "testing_notes": "Baseline",
+        },
     )
 
     assert response.status_code == 401
@@ -89,14 +93,14 @@ def test_update_dataset_metadata_persists_to_registry_file():
 def test_motec_reader_supports_selected_columns(tmp_path):
     csv_path = tmp_path / "motec.csv"
     csv_path.write_text(
-        '\n'.join(
+        "\n".join(
             [
                 '"Format","MoTeC CSV File"',
                 '"Sample Rate","500.000","Hz"',
-                '',
+                "",
                 '"Time","Battery Temp","Motor Speed"',
                 '"s","C","rpm"',
-                '',
+                "",
                 '"0.000","18.0","0"',
                 '"0.002","18.1","10"',
             ]
@@ -121,7 +125,12 @@ def test_chart_data_rejects_missing_columns():
 
     response = client.post(
         f"/api/datasets/{record.slug}/chart-data",
-        json={"chart_type": "line", "x_column": "Time", "y_columns": ["Missing"], "filters": []},
+        json={
+            "chart_type": "line",
+            "x_column": "Time",
+            "y_columns": ["Missing"],
+            "filters": [],
+        },
     )
 
     assert response.status_code == 400
@@ -158,7 +167,9 @@ def test_unfiltered_preview_avoids_full_dataset_read(monkeypatch):
 
     monkeypatch.setattr("app.api.routes.datasets.read_dataset", fail_full_read)
 
-    response = client.post(f"/api/datasets/{record.slug}/preview", json={"filters": [], "limit": 2})
+    response = client.post(
+        f"/api/datasets/{record.slug}/preview", json={"filters": [], "limit": 2}
+    )
 
     assert response.status_code == 200
     assert response.json() == {
@@ -204,27 +215,32 @@ def test_preview_rejects_limit_above_configured_max():
 def test_download_returns_parsed_csv_without_auth():
     csv_path = settings.data_dir / "sample.csv"
     csv_path.write_text("Time,Speed\n0,10\n1,20\n", encoding="utf-8")
-    record = registry.register(csv_path.name, csv_path.stat().st_size, original_name="Track Day.csv")
+    record = registry.register(
+        csv_path.name, csv_path.stat().st_size, original_name="Track Day.csv"
+    )
 
     response = client.get(f"/api/datasets/{record.slug}/download")
 
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/csv")
-    assert response.headers["content-disposition"] == 'attachment; filename="Track-Day-parsed.csv"'
+    assert (
+        response.headers["content-disposition"]
+        == 'attachment; filename="Track-Day-parsed.csv"'
+    )
     assert response.text == "Time,Speed\n0,10\n1,20\n"
 
 
 def test_download_motec_csv_returns_parsed_table():
     csv_path = settings.data_dir / "motec.csv"
     csv_path.write_text(
-        '\n'.join(
+        "\n".join(
             [
                 '"Format","MoTeC CSV File"',
                 '"Sample Rate","500.000","Hz"',
-                '',
+                "",
                 '"Time","Battery Temp","Motor Speed"',
                 '"s","C","rpm"',
-                '',
+                "",
                 '"0.000","18.0","0"',
                 '"0.002","18.1","10"',
             ]
@@ -241,27 +257,42 @@ def test_download_motec_csv_returns_parsed_table():
 
 def test_filtered_download_applies_export_filters():
     csv_path = settings.data_dir / "sample.csv"
-    csv_path.write_text("Time,Speed,Driver\n0,10,Ada\n1,20,Bea\n2,30,Ada\n", encoding="utf-8")
+    csv_path.write_text(
+        "Time,Speed,Driver\n0,10,Ada\n1,20,Bea\n2,30,Ada\n", encoding="utf-8"
+    )
     record = registry.register(csv_path.name, csv_path.stat().st_size)
 
     response = client.post(
         f"/api/datasets/{record.slug}/download",
-        json={"filters": [{"column": "Driver", "op": "eq", "value": "Ada"}, {"column": "Speed", "op": "gte", "value": 30}]},
+        json={
+            "filters": [
+                {"column": "Driver", "op": "eq", "value": "Ada"},
+                {"column": "Speed", "op": "gte", "value": 30},
+            ]
+        },
     )
 
     assert response.status_code == 200
-    assert response.headers["content-disposition"] == 'attachment; filename="sample-filtered-parsed.csv"'
+    assert (
+        response.headers["content-disposition"]
+        == 'attachment; filename="sample-filtered-parsed.csv"'
+    )
     assert response.text == "Time,Speed,Driver\n2,30,Ada\n"
 
 
 def test_filtered_download_limits_selected_columns_in_dataset_order():
     csv_path = settings.data_dir / "sample.csv"
-    csv_path.write_text("Time,Speed,Driver\n0,10,Ada\n1,20,Bea\n2,30,Ada\n", encoding="utf-8")
+    csv_path.write_text(
+        "Time,Speed,Driver\n0,10,Ada\n1,20,Bea\n2,30,Ada\n", encoding="utf-8"
+    )
     record = registry.register(csv_path.name, csv_path.stat().st_size)
 
     response = client.post(
         f"/api/datasets/{record.slug}/download",
-        json={"columns": ["Driver", "Time"], "filters": [{"column": "Speed", "op": "gte", "value": 20}]},
+        json={
+            "columns": ["Driver", "Time"],
+            "filters": [{"column": "Speed", "op": "gte", "value": 20}],
+        },
     )
 
     assert response.status_code == 200

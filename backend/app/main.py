@@ -8,7 +8,9 @@ from app.config import settings
 
 app = FastAPI(title="DAQ CSV API", version="0.1.0")
 
-origins = [origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()]
+origins = [
+    origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()
+]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins or ["*"],

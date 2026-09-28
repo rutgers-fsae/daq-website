@@ -1,0 +1,13 @@
+{
+  "name": "daq-website-quality",
+  "private": true,
+  "scripts": {
+    "prepare": "husky",
+    "check": "prettier --check . && npm --prefix frontend run lint -- --max-warnings=0 && npm --prefix frontend run typecheck && uv run --locked --project backend ruff check backend && uv run --locked --project backend ruff format --check backend && uv run --locked --project backend ty check --project backend --error-on-warning",
+    "format": "prettier --write . && npm --prefix frontend run lint -- --fix && uv run --locked --project backend ruff check --fix backend && uv run --locked --project backend ruff format backend"
+  },
+  "devDependencies": {
+    "husky": "9.1.7",
+    "prettier": "3.8.3"
+  }
+}

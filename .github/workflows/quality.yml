@@ -1,0 +1,38 @@
+name: Code quality
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      HUSKY: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.10.4"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: npm ci
+      - run: npm ci --prefix frontend
+      - run: uv sync --locked --project backend --extra dev
+      - run: npm run check

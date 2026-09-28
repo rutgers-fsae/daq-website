@@ -8,7 +8,9 @@ class Settings(BaseSettings):
 
     upload_password: str = "changeme"
     data_dir: Path = Path(__file__).resolve().parents[2] / "data"
-    registry_path: Path = Path(__file__).resolve().parents[1] / "storage" / "datasets.json"
+    registry_path: Path = (
+        Path(__file__).resolve().parents[1] / "storage" / "datasets.json"
+    )
     cors_origins: str = "*"
     max_upload_bytes: int = 1024 * 1024 * 1024
     upload_chunk_bytes: int = 1024 * 1024

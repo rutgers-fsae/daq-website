@@ -2,7 +2,11 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { exportDataset, getDataset, updateDatasetMetadata } from "../api/datasets";
+import {
+  exportDataset,
+  getDataset,
+  updateDatasetMetadata,
+} from "../api/datasets";
 import { useDatasetSchema } from "../hooks/useDatasetSchema";
 import { DatasetPage } from "./DatasetPage";
 import { render } from "../test/render";
@@ -31,8 +35,19 @@ describe("DatasetPage", () => {
   beforeEach(() => {
     vi.mocked(useDatasetSchema).mockReturnValue({
       columns: [
-        { name: "Time", type: "numeric", unit: "s", display_name: "Time (s)", sample_values: ["0", "1"] },
-        { name: "Driver", type: "categorical", display_name: "Driver", sample_values: ["Ada"] },
+        {
+          name: "Time",
+          type: "numeric",
+          unit: "s",
+          display_name: "Time (s)",
+          sample_values: ["0", "1"],
+        },
+        {
+          name: "Driver",
+          type: "categorical",
+          display_name: "Driver",
+          sample_values: ["Ada"],
+        },
       ],
       loading: false,
       error: null,
@@ -54,16 +69,24 @@ describe("DatasetPage", () => {
         testing_notes: "Baseline run",
       },
     });
-    vi.mocked(updateDatasetMetadata).mockImplementation(async (_slug, metadata) => ({
-      slug: "sample",
-      title: "Sample",
-      filename: "sample.csv",
-      uploaded_at: "2026-07-08T12:00:00Z",
-      size_bytes: 123,
-      metadata,
-    }));
-    Object.defineProperty(URL, "createObjectURL", { configurable: true, value: vi.fn(() => "blob:export") });
-    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: vi.fn() });
+    vi.mocked(updateDatasetMetadata).mockImplementation(
+      async (_slug, metadata) => ({
+        slug: "sample",
+        title: "Sample",
+        filename: "sample.csv",
+        uploaded_at: "2026-07-08T12:00:00Z",
+        size_bytes: 123,
+        metadata,
+      }),
+    );
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: vi.fn(() => "blob:export"),
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      value: vi.fn(),
+    });
     Object.defineProperty(window, "localStorage", {
       configurable: true,
       value: {
@@ -71,7 +94,9 @@ describe("DatasetPage", () => {
         setItem: vi.fn(),
       },
     });
-    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(
+      () => undefined,
+    );
   });
 
   it("opens export modal and sends export-only filters with selected columns", async () => {
@@ -79,25 +104,39 @@ describe("DatasetPage", () => {
     render(
       <MemoryRouter initialEntries={["/datasets/sample"]}>
         <Routes>
-          <Route path="/datasets/:slug" element={<DatasetPage theme="light" />} />
+          <Route
+            path="/datasets/:slug"
+            element={<DatasetPage theme="light" />}
+          />
         </Routes>
       </MemoryRouter>,
     );
 
-    expect(screen.queryByRole("dialog", { name: "CSV Export" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: "CSV Export" }),
+    ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Download CSV" }));
 
-    expect(screen.getByRole("dialog", { name: "CSV Export" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "CSV Export" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: "Time (s)" })).toBeChecked();
     expect(screen.getByRole("checkbox", { name: "Driver" })).toBeChecked();
 
     await user.click(screen.getByRole("checkbox", { name: "Time (s)" }));
-    await user.selectOptions(screen.getByLabelText("Export filter column"), "Driver");
+    await user.selectOptions(
+      screen.getByLabelText("Export filter column"),
+      "Driver",
+    );
     await user.type(screen.getByLabelText("Export filter value"), "Ada");
     await user.click(screen.getByRole("button", { name: "Export CSV" }));
 
-    expect(exportDataset).toHaveBeenCalledWith("sample", [{ column: "Driver", op: "eq", value: "Ada" }], ["Driver"]);
+    expect(exportDataset).toHaveBeenCalledWith(
+      "sample",
+      [{ column: "Driver", op: "eq", value: "Ada" }],
+      ["Driver"],
+    );
   });
 
   it("closes the export modal with Escape", async () => {
@@ -105,24 +144,34 @@ describe("DatasetPage", () => {
     render(
       <MemoryRouter initialEntries={["/datasets/sample"]}>
         <Routes>
-          <Route path="/datasets/:slug" element={<DatasetPage theme="light" />} />
+          <Route
+            path="/datasets/:slug"
+            element={<DatasetPage theme="light" />}
+          />
         </Routes>
       </MemoryRouter>,
     );
 
     await user.click(screen.getByRole("button", { name: "Download CSV" }));
-    expect(screen.getByRole("dialog", { name: "CSV Export" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "CSV Export" }),
+    ).toBeInTheDocument();
 
     await user.keyboard("{Escape}");
 
-    expect(screen.queryByRole("dialog", { name: "CSV Export" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: "CSV Export" }),
+    ).not.toBeInTheDocument();
   });
 
   it("renders dataset metadata fields from the dataset record", async () => {
     render(
       <MemoryRouter initialEntries={["/datasets/sample"]}>
         <Routes>
-          <Route path="/datasets/:slug" element={<DatasetPage theme="light" />} />
+          <Route
+            path="/datasets/:slug"
+            element={<DatasetPage theme="light" />}
+          />
         </Routes>
       </MemoryRouter>,
     );
@@ -138,16 +187,23 @@ describe("DatasetPage", () => {
     render(
       <MemoryRouter initialEntries={["/datasets/sample"]}>
         <Routes>
-          <Route path="/datasets/:slug" element={<DatasetPage theme="light" />} />
+          <Route
+            path="/datasets/:slug"
+            element={<DatasetPage theme="light" />}
+          />
         </Routes>
       </MemoryRouter>,
     );
 
     expect(await screen.findByDisplayValue("Ada")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Collapse testing metadata" }));
+    await user.click(
+      screen.getByRole("button", { name: "Collapse testing metadata" }),
+    );
     expect(screen.queryByDisplayValue("Ada")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Expand testing metadata" }));
+    await user.click(
+      screen.getByRole("button", { name: "Expand testing metadata" }),
+    );
     expect(screen.getByDisplayValue("Ada")).toBeInTheDocument();
   });
 
@@ -156,7 +212,10 @@ describe("DatasetPage", () => {
     render(
       <MemoryRouter initialEntries={["/datasets/sample"]}>
         <Routes>
-          <Route path="/datasets/:slug" element={<DatasetPage theme="light" />} />
+          <Route
+            path="/datasets/:slug"
+            element={<DatasetPage theme="light" />}
+          />
         </Routes>
       </MemoryRouter>,
     );
@@ -173,12 +232,18 @@ describe("DatasetPage", () => {
     render(
       <MemoryRouter initialEntries={["/datasets/sample"]}>
         <Routes>
-          <Route path="/datasets/:slug" element={<DatasetPage theme="light" />} />
+          <Route
+            path="/datasets/:slug"
+            element={<DatasetPage theme="light" />}
+          />
         </Routes>
       </MemoryRouter>,
     );
 
-    await user.type(await screen.findByLabelText("Metadata upload password"), "changeme");
+    await user.type(
+      await screen.findByLabelText("Metadata upload password"),
+      "changeme",
+    );
     await user.clear(screen.getByLabelText("Driver"));
     await user.type(screen.getByLabelText("Driver"), "Bea");
     await user.clear(screen.getByLabelText("Ride Height"));

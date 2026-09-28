@@ -21,12 +21,23 @@ type XAxisKind = "number" | "date" | "category";
 
 function isEligibleTrace(trace: PlotTrace) {
   if (trace.type !== "scatter") return false;
-  return typeof trace.mode !== "string" || trace.mode.includes("lines") || trace.mode.includes("markers");
+  return (
+    typeof trace.mode !== "string" ||
+    trace.mode.includes("lines") ||
+    trace.mode.includes("markers")
+  );
 }
 
 function axisKind(values: unknown[]): XAxisKind {
-  const populated = values.filter((value) => value !== null && value !== undefined);
-  if (populated.length > 0 && populated.every((value) => typeof value === "number" && Number.isFinite(value))) {
+  const populated = values.filter(
+    (value) => value !== null && value !== undefined,
+  );
+  if (
+    populated.length > 0 &&
+    populated.every(
+      (value) => typeof value === "number" && Number.isFinite(value),
+    )
+  ) {
     return "number";
   }
   if (
@@ -34,7 +45,9 @@ function axisKind(values: unknown[]): XAxisKind {
     populated.every(
       (value) =>
         value instanceof Date ||
-        (typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value) && Number.isFinite(Date.parse(value))),
+        (typeof value === "string" &&
+          /^\d{4}-\d{2}-\d{2}/.test(value) &&
+          Number.isFinite(Date.parse(value))),
     )
   ) {
     return "date";
@@ -42,25 +55,46 @@ function axisKind(values: unknown[]): XAxisKind {
   return "category";
 }
 
-function comparableValue(value: unknown, kind: XAxisKind, categories: Map<string, number>) {
+function comparableValue(
+  value: unknown,
+  kind: XAxisKind,
+  categories: Map<string, number>,
+) {
   if (kind === "number") {
     return typeof value === "number" && Number.isFinite(value) ? value : null;
   }
   if (kind === "date") {
-    const parsed = value instanceof Date ? value.getTime() : typeof value === "string" ? Date.parse(value) : NaN;
+    const parsed =
+      value instanceof Date
+        ? value.getTime()
+        : typeof value === "string"
+          ? Date.parse(value)
+          : NaN;
     return Number.isFinite(parsed) ? parsed : null;
   }
   return categories.get(String(value)) ?? null;
 }
 
-function comparableBound(value: unknown, kind: XAxisKind, categories: Map<string, number>) {
-  if (kind === "category" && typeof value === "number" && Number.isFinite(value)) {
+function comparableBound(
+  value: unknown,
+  kind: XAxisKind,
+  categories: Map<string, number>,
+) {
+  if (
+    kind === "category" &&
+    typeof value === "number" &&
+    Number.isFinite(value)
+  ) {
     return value;
   }
   return comparableValue(value, kind, categories);
 }
 
-function isWithin(value: number, range: AxisRange | undefined, convert: (bound: unknown) => number | null) {
+function isWithin(
+  value: number,
+  range: AxisRange | undefined,
+  convert: (bound: unknown) => number | null,
+) {
   if (!range) return true;
   const first = convert(range[0]);
   const second = convert(range[1]);
@@ -70,15 +104,33 @@ function isWithin(value: number, range: AxisRange | undefined, convert: (bound: 
 
 function traceColor(trace: PlotTrace, fallback: string) {
   const line = trace.line;
-  if (line && typeof line === "object" && "color" in line && typeof line.color === "string") return line.color;
+  if (
+    line &&
+    typeof line === "object" &&
+    "color" in line &&
+    typeof line.color === "string"
+  )
+    return line.color;
   const marker = trace.marker;
-  if (marker && typeof marker === "object" && "color" in marker && typeof marker.color === "string") return marker.color;
+  if (
+    marker &&
+    typeof marker === "object" &&
+    "color" in marker &&
+    typeof marker.color === "string"
+  )
+    return marker.color;
   return fallback;
 }
 
-export function calculateVisibleStatistics(data: PlotTrace[], ranges: VisibleRanges, colorway: string[]): TraceStatistics[] {
+export function calculateVisibleStatistics(
+  data: PlotTrace[],
+  ranges: VisibleRanges,
+  colorway: string[],
+): TraceStatistics[] {
   const eligible = data.filter(isEligibleTrace);
-  const allXValues = eligible.flatMap((trace) => (Array.isArray(trace.x) ? trace.x : []));
+  const allXValues = eligible.flatMap((trace) =>
+    Array.isArray(trace.x) ? trace.x : [],
+  );
   const kind = axisKind(allXValues);
   const categories = new Map<string, number>();
   if (kind === "category") {
@@ -90,21 +142,37 @@ export function calculateVisibleStatistics(data: PlotTrace[], ranges: VisibleRan
 
   return eligible.map((trace, traceIndex) => {
     const yValues = Array.isArray(trace.y) ? trace.y : [];
-    const xValues = Array.isArray(trace.x) ? trace.x : yValues.map((_, index) => index);
+    const xValues = Array.isArray(trace.x)
+      ? trace.x
+      : yValues.map((_, index) => index);
     const yRange = trace.yaxis === "y2" ? ranges.y2 : ranges.y;
     const visibleValues: number[] = [];
 
     yValues.forEach((rawY, index) => {
       if (typeof rawY !== "number" || !Number.isFinite(rawY)) return;
       const x = comparableValue(xValues[index] ?? index, kind, categories);
-      if (x === null || !isWithin(x, ranges.x, (bound) => comparableBound(bound, kind, categories))) return;
-      if (!isWithin(rawY, yRange, (bound) => (typeof bound === "number" && Number.isFinite(bound) ? bound : null))) return;
+      if (
+        x === null ||
+        !isWithin(x, ranges.x, (bound) =>
+          comparableBound(bound, kind, categories),
+        )
+      )
+        return;
+      if (
+        !isWithin(rawY, yRange, (bound) =>
+          typeof bound === "number" && Number.isFinite(bound) ? bound : null,
+        )
+      )
+        return;
       visibleValues.push(rawY);
     });
 
     if (visibleValues.length === 0) {
       return {
-        name: typeof trace.name === "string" ? trace.name : `Trace ${traceIndex + 1}`,
+        name:
+          typeof trace.name === "string"
+            ? trace.name
+            : `Trace ${traceIndex + 1}`,
         color: traceColor(trace, colorway[traceIndex % colorway.length]),
         rms: null,
         average: null,
@@ -114,9 +182,13 @@ export function calculateVisibleStatistics(data: PlotTrace[], ranges: VisibleRan
     }
 
     const sum = visibleValues.reduce((total, value) => total + value, 0);
-    const squareSum = visibleValues.reduce((total, value) => total + value * value, 0);
+    const squareSum = visibleValues.reduce(
+      (total, value) => total + value * value,
+      0,
+    );
     return {
-      name: typeof trace.name === "string" ? trace.name : `Trace ${traceIndex + 1}`,
+      name:
+        typeof trace.name === "string" ? trace.name : `Trace ${traceIndex + 1}`,
       color: traceColor(trace, colorway[traceIndex % colorway.length]),
       rms: Math.sqrt(squareSum / visibleValues.length),
       average: sum / visibleValues.length,
@@ -126,7 +198,10 @@ export function calculateVisibleStatistics(data: PlotTrace[], ranges: VisibleRan
   });
 }
 
-export function updateVisibleRanges(current: VisibleRanges, event: Record<string, unknown>): VisibleRanges {
+export function updateVisibleRanges(
+  current: VisibleRanges,
+  event: Record<string, unknown>,
+): VisibleRanges {
   const next = { ...current };
   (["xaxis", "yaxis", "yaxis2"] as const).forEach((axis) => {
     const key = axis === "xaxis" ? "x" : axis === "yaxis" ? "y" : "y2";
@@ -141,12 +216,15 @@ export function updateVisibleRanges(current: VisibleRanges, event: Record<string
     }
     const first = event[`${axis}.range[0]`];
     const second = event[`${axis}.range[1]`];
-    if (first !== undefined && second !== undefined) next[key] = [first, second];
+    if (first !== undefined && second !== undefined)
+      next[key] = [first, second];
   });
   return next;
 }
 
-const numberFormatter = new Intl.NumberFormat("en-US", { maximumSignificantDigits: 4 });
+const numberFormatter = new Intl.NumberFormat("en-US", {
+  maximumSignificantDigits: 4,
+});
 
 export function formatStatistic(value: number | null) {
   return value === null ? "N/A" : numberFormatter.format(value);

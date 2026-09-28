@@ -109,3 +109,27 @@ npm run dev
 - `POST /api/datasets/{slug}/preview`
 - `POST /api/datasets/{slug}/chart-data`
 - `POST /api/upload` with `Authorization: Bearer <UPLOAD_PASSWORD>`
+
+## Formatting and linting
+
+Install Node.js 22+ and [uv](https://docs.astral.sh/uv/getting-started/installation/),
+then run from the repository root:
+
+```sh
+npm ci
+npm ci --prefix frontend
+uv sync --locked --project backend --extra dev
+npm run format
+npm run check
+```
+
+`npm ci` enables Husky commit and push hooks. They run the same checks as CI:
+Prettier formatting, the existing ESLint rules with no warnings allowed,
+TypeScript type checking, Ruff linting and formatting, and ty Python type checking.
+The hooks check without modifying or staging files; `npm run format` applies
+formatting and safe lint fixes. Dataset files, generated registries, dependencies,
+and build output are excluded from Prettier.
+
+GitHub Actions runs on pushes to every branch and on pull requests. Require the
+`Code quality / quality` status check in repository rulesets to block failing
+merges. CI reports failed pushes; GitHub rulesets enforce merge restrictions.

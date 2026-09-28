@@ -2,8 +2,22 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Play, X } from "lucide-react";
 import type { SchemaColumn } from "../types/dataset";
 import type { ChartConfig, ChartRequest, FilterRule } from "../types/chart";
-import { Alert, Badge, Button, FieldInput, FieldSelect, Label, Panel } from "./ui";
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "./ui/command";
+import {
+  Alert,
+  Badge,
+  Button,
+  FieldInput,
+  FieldSelect,
+  Label,
+  Panel,
+} from "./ui";
+import {
+  Command,
+  CommandEmpty,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "./ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 
 type Props = {
@@ -22,10 +36,17 @@ type Props = {
   ) => void;
 };
 
-const defaultConfig: ChartConfig = { chart_type: "line", y_columns: [], filters: [] };
+const defaultConfig: ChartConfig = {
+  chart_type: "line",
+  y_columns: [],
+  filters: [],
+};
 
 function isTimeColumn(column: SchemaColumn) {
-  return (column.type === "numeric" || column.type === "datetime") && /(time|timestamp)/i.test(column.name);
+  return (
+    (column.type === "numeric" || column.type === "datetime") &&
+    /(time|timestamp)/i.test(column.name)
+  );
 }
 
 function filterValueForColumn(value: string, column: SchemaColumn | undefined) {
@@ -47,8 +68,15 @@ function timeFilterState(filters: FilterRule[] | undefined) {
   };
 }
 
-export function ChartBuilder({ columns, config = defaultConfig, onConfigChange, onRun }: Props) {
-  const [chartType, setChartType] = useState<ChartRequest["chart_type"]>(config.chart_type);
+export function ChartBuilder({
+  columns,
+  config = defaultConfig,
+  onConfigChange,
+  onRun,
+}: Props) {
+  const [chartType, setChartType] = useState<ChartRequest["chart_type"]>(
+    config.chart_type,
+  );
   const [xColumn, setXColumn] = useState(config.x_column || "");
   const [yColumns, setYColumns] = useState<string[]>(config.y_columns);
   const initialTimeFilter = timeFilterState(config.filters);
@@ -58,10 +86,16 @@ export function ChartBuilder({ columns, config = defaultConfig, onConfigChange, 
   const [isXDropdownOpen, setIsXDropdownOpen] = useState(false);
   const [isYDropdownOpen, setIsYDropdownOpen] = useState(false);
 
-  const numericColumns = useMemo(() => columns.filter((col) => col.type === "numeric"), [columns]);
+  const numericColumns = useMemo(
+    () => columns.filter((col) => col.type === "numeric"),
+    [columns],
+  );
   const timeColumns = useMemo(() => columns.filter(isTimeColumn), [columns]);
-  const selectedTimeColumn = columns.find((column) => column.name === timeColumn);
-  const timeInputType = selectedTimeColumn?.type === "datetime" ? "text" : "number";
+  const selectedTimeColumn = columns.find(
+    (column) => column.name === timeColumn,
+  );
+  const timeInputType =
+    selectedTimeColumn?.type === "datetime" ? "text" : "number";
   const startTimeTrimmed = startTime.trim();
   const endTimeTrimmed = endTime.trim();
   const hasInvalidTimeFilter =
@@ -74,21 +108,42 @@ export function ChartBuilder({ columns, config = defaultConfig, onConfigChange, 
     }
     const rules: FilterRule[] = [];
     if (startTimeTrimmed !== "") {
-      rules.push({ column: timeColumn, op: "gte", value: filterValueForColumn(startTimeTrimmed, selectedTimeColumn) });
+      rules.push({
+        column: timeColumn,
+        op: "gte",
+        value: filterValueForColumn(startTimeTrimmed, selectedTimeColumn),
+      });
     }
     if (endTimeTrimmed !== "") {
-      rules.push({ column: timeColumn, op: "lte", value: filterValueForColumn(endTimeTrimmed, selectedTimeColumn) });
+      rules.push({
+        column: timeColumn,
+        op: "lte",
+        value: filterValueForColumn(endTimeTrimmed, selectedTimeColumn),
+      });
     }
     return rules;
-  }, [endTimeTrimmed, hasInvalidTimeFilter, selectedTimeColumn, startTimeTrimmed, timeColumn]);
+  }, [
+    endTimeTrimmed,
+    hasInvalidTimeFilter,
+    selectedTimeColumn,
+    startTimeTrimmed,
+    timeColumn,
+  ]);
 
   useEffect(() => {
-    onConfigChange?.({ chart_type: chartType, x_column: xColumn || undefined, y_columns: yColumns, filters });
+    onConfigChange?.({
+      chart_type: chartType,
+      x_column: xColumn || undefined,
+      y_columns: yColumns,
+      filters,
+    });
   }, [chartType, filters, onConfigChange, xColumn, yColumns]);
 
   useEffect(() => {
     const available = new Set(columns.map((column) => column.name));
-    setXColumn((current) => (current && !available.has(current) ? "" : current));
+    setXColumn((current) =>
+      current && !available.has(current) ? "" : current,
+    );
     setYColumns((current) => current.filter((column) => available.has(column)));
     setTimeColumn((current) => {
       if (current && available.has(current)) {
@@ -110,17 +165,23 @@ export function ChartBuilder({ columns, config = defaultConfig, onConfigChange, 
 
   function toggleYColumn(columnName: string) {
     setYColumns((prev) =>
-      prev.includes(columnName) ? prev.filter((item) => item !== columnName) : [...prev, columnName],
+      prev.includes(columnName)
+        ? prev.filter((item) => item !== columnName)
+        : [...prev, columnName],
     );
   }
 
-  const selectedUnits = Array.from(new Set(yColumns.map((column) => columnUnit(column) || "unitless")));
+  const selectedUnits = Array.from(
+    new Set(yColumns.map((column) => columnUnit(column) || "unitless")),
+  );
   const hasMultipleUnits = selectedUnits.length > 1;
   const hasTooManyUnits = selectedUnits.length > 2;
   const primaryUnit = selectedUnits[0];
   const secondaryUnit = selectedUnits[1];
-  const primaryUnitLabel = primaryUnit === "unitless" ? "Unitless" : primaryUnit;
-  const secondaryUnitLabel = secondaryUnit === "unitless" ? "Unitless" : secondaryUnit;
+  const primaryUnitLabel =
+    primaryUnit === "unitless" ? "Unitless" : primaryUnit;
+  const secondaryUnitLabel =
+    secondaryUnit === "unitless" ? "Unitless" : secondaryUnit;
 
   function axisTitleForUnit(unit: string | undefined) {
     if (!unit) return "Values";
@@ -129,23 +190,36 @@ export function ChartBuilder({ columns, config = defaultConfig, onConfigChange, 
 
   function traceAxisByColumn() {
     return Object.fromEntries(
-      yColumns.map((column) => [column, (columnUnit(column) || "unitless") === primaryUnit ? "y" : "y2"]),
+      yColumns.map((column) => [
+        column,
+        (columnUnit(column) || "unitless") === primaryUnit ? "y" : "y2",
+      ]),
     ) as Record<string, "y" | "y2">;
   }
   const yDropdownLabel =
-    yColumns.length === 0 ? "Select Y Series" : yColumns.length === 1 ? "1 series selected" : `${yColumns.length} series selected`;
+    yColumns.length === 0
+      ? "Select Y Series"
+      : yColumns.length === 1
+        ? "1 series selected"
+        : `${yColumns.length} series selected`;
   const xDropdownLabel = xColumn ? columnLabel(xColumn) : "Select X Axis";
 
   return (
     <Panel className="grid gap-3 bg-surface-soft p-3 shadow-none">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-muted">Chart Builder</h3>
-          <p className="text-xs text-subtle">{numericColumns.length} numeric channels</p>
+          <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-muted">
+            Chart Builder
+          </h3>
+          <p className="text-xs text-subtle">
+            {numericColumns.length} numeric channels
+          </p>
         </div>
         <FieldSelect
           value={chartType}
-          onChange={(e) => setChartType(e.target.value as ChartRequest["chart_type"])}
+          onChange={(e) =>
+            setChartType(e.target.value as ChartRequest["chart_type"])
+          }
           className="w-full sm:w-40"
           aria-label="Chart type"
         >
@@ -171,13 +245,22 @@ export function ChartBuilder({ columns, config = defaultConfig, onConfigChange, 
                 className="flex h-9 w-full items-center justify-between rounded-md border border-input-border bg-input px-3 text-left text-sm font-normal text-text shadow-sm transition hover:border-button focus:outline-none focus:ring-2 focus:ring-ring/30"
                 aria-label={xDropdownLabel}
               >
-                <span className="truncate normal-case tracking-normal">{xDropdownLabel}</span>
-                <ChevronDown size={15} aria-hidden="true" className="shrink-0 text-muted" />
+                <span className="truncate normal-case tracking-normal">
+                  {xDropdownLabel}
+                </span>
+                <ChevronDown
+                  size={15}
+                  aria-hidden="true"
+                  className="shrink-0 text-muted"
+                />
               </button>
             </PopoverTrigger>
             <PopoverContent>
               <Command label="X axis channels">
-                <CommandInput placeholder="Search X channels..." aria-label="Search X channels" />
+                <CommandInput
+                  placeholder="Search X channels..."
+                  aria-label="Search X channels"
+                />
                 <CommandList>
                   <CommandEmpty>No channels found.</CommandEmpty>
                   <CommandItem
@@ -198,7 +281,9 @@ export function ChartBuilder({ columns, config = defaultConfig, onConfigChange, 
                         setXColumn(col.name);
                         setIsXDropdownOpen(false);
                       }}
-                      className={xColumn === col.name ? "font-medium" : undefined}
+                      className={
+                        xColumn === col.name ? "font-medium" : undefined
+                      }
                     >
                       {col.display_name || col.name}
                     </CommandItem>
@@ -217,8 +302,14 @@ export function ChartBuilder({ columns, config = defaultConfig, onConfigChange, 
                 className="flex h-9 w-full items-center justify-between rounded-md border border-input-border bg-input px-3 text-left text-sm font-normal text-text shadow-sm transition hover:border-button focus:outline-none focus:ring-2 focus:ring-ring/30"
                 aria-label={yDropdownLabel}
               >
-                <span className="truncate normal-case tracking-normal">{yDropdownLabel}</span>
-                <ChevronDown size={15} aria-hidden="true" className="shrink-0 text-muted" />
+                <span className="truncate normal-case tracking-normal">
+                  {yDropdownLabel}
+                </span>
+                <ChevronDown
+                  size={15}
+                  aria-hidden="true"
+                  className="shrink-0 text-muted"
+                />
               </button>
             </PopoverTrigger>
             <PopoverContent>
@@ -235,7 +326,10 @@ export function ChartBuilder({ columns, config = defaultConfig, onConfigChange, 
                 )}
               </div>
               <Command label="Y axis channels">
-                <CommandInput placeholder="Search Y channels..." aria-label="Search Y channels" />
+                <CommandInput
+                  placeholder="Search Y channels..."
+                  aria-label="Search Y channels"
+                />
                 <CommandList>
                   <CommandEmpty>No numeric channels found.</CommandEmpty>
                   {numericColumns.map((col) => (
@@ -252,7 +346,9 @@ export function ChartBuilder({ columns, config = defaultConfig, onConfigChange, 
                         className="mr-2 h-4 w-4 shrink-0 accent-button"
                         aria-label={col.display_name || col.name}
                       />
-                      <span className="truncate">{col.display_name || col.name}</span>
+                      <span className="truncate">
+                        {col.display_name || col.name}
+                      </span>
                     </CommandItem>
                   ))}
                 </CommandList>
@@ -280,7 +376,9 @@ export function ChartBuilder({ columns, config = defaultConfig, onConfigChange, 
       {timeColumns.length > 0 && (
         <div className="grid gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 shadow-sm">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Time Window</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
+              Time Window
+            </p>
             <Badge tone="default">{timeColumns.length} time fields</Badge>
           </div>
           <div className="grid gap-1.5 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)]">
@@ -339,7 +437,8 @@ export function ChartBuilder({ columns, config = defaultConfig, onConfigChange, 
       )}
       {hasInvalidTimeFilter && (
         <Alert tone="warning" className="text-xs">
-          Time filter values must be numeric for {selectedTimeColumn?.display_name || selectedTimeColumn?.name}.
+          Time filter values must be numeric for{" "}
+          {selectedTimeColumn?.display_name || selectedTimeColumn?.name}.
         </Alert>
       )}
       {hasMultipleUnits && !hasTooManyUnits && (
@@ -349,19 +448,34 @@ export function ChartBuilder({ columns, config = defaultConfig, onConfigChange, 
       )}
       {hasTooManyUnits && (
         <Alert tone="warning" className="text-xs">
-          More than two Y-axis units selected. Only two axes are supported per graph.
+          More than two Y-axis units selected. Only two axes are supported per
+          graph.
         </Alert>
       )}
       <Button
-        disabled={yColumns.length === 0 || hasTooManyUnits || hasInvalidTimeFilter}
+        disabled={
+          yColumns.length === 0 || hasTooManyUnits || hasInvalidTimeFilter
+        }
         onClick={() =>
           onRun(
-            { chart_type: chartType, x_column: xColumn || undefined, y_columns: yColumns, filters },
+            {
+              chart_type: chartType,
+              x_column: xColumn || undefined,
+              y_columns: yColumns,
+              filters,
+            },
             {
               xTitle: xColumn ? columnLabel(xColumn) : "Index",
-              yTitle: yColumns.length === 1 ? columnLabel(yColumns[0]) : axisTitleForUnit(primaryUnit),
-              y2Title: secondaryUnit ? axisTitleForUnit(secondaryUnit) : undefined,
-              traceLabels: Object.fromEntries(yColumns.map((column) => [column, columnLabel(column)])),
+              yTitle:
+                yColumns.length === 1
+                  ? columnLabel(yColumns[0])
+                  : axisTitleForUnit(primaryUnit),
+              y2Title: secondaryUnit
+                ? axisTitleForUnit(secondaryUnit)
+                : undefined,
+              traceLabels: Object.fromEntries(
+                yColumns.map((column) => [column, columnLabel(column)]),
+              ),
               traceAxisByColumn: traceAxisByColumn(),
             },
           )

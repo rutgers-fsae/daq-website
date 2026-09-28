@@ -13,11 +13,19 @@ def _plotly_trace_options(chart_type: str) -> dict[str, str]:
     return {"type": chart_type}
 
 
-def build_chart_payload(df, chart_type: str, x_column: str | None, y_columns: list[str], group_by: str | None) -> dict[str, Any]:
+def build_chart_payload(
+    df,
+    chart_type: str,
+    x_column: str | None,
+    y_columns: list[str],
+    group_by: str | None,
+) -> dict[str, Any]:
     source_row_count = len(df)
     was_downsampled = source_row_count > settings.max_chart_rows
     if was_downsampled:
-        indices = np.linspace(0, source_row_count - 1, settings.max_chart_rows, dtype=int)
+        indices = np.linspace(
+            0, source_row_count - 1, settings.max_chart_rows, dtype=int
+        )
         df = df.iloc[np.unique(indices)].reset_index(drop=True)
 
     data = []
@@ -29,7 +37,9 @@ def build_chart_payload(df, chart_type: str, x_column: str | None, y_columns: li
                     data.append(
                         {
                             "name": f"{group} - {y}",
-                            "x": group_df[x_column].tolist() if x_column else list(range(len(group_df))),
+                            "x": group_df[x_column].tolist()
+                            if x_column
+                            else list(range(len(group_df))),
                             "y": group_df[y].tolist(),
                             **trace_options,
                         }
@@ -40,7 +50,9 @@ def build_chart_payload(df, chart_type: str, x_column: str | None, y_columns: li
                 data.append(
                     {
                         "name": y,
-                        "x": df[x_column].tolist() if x_column else list(range(len(df))),
+                        "x": df[x_column].tolist()
+                        if x_column
+                        else list(range(len(df))),
                         "y": df[y].tolist(),
                         **trace_options,
                     }

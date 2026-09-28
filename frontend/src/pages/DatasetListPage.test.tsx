@@ -40,7 +40,12 @@ describe("DatasetListPage", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("link", { name: "Test Run" })).toHaveAttribute("href", "/datasets/test-run");
-    expect(screen.getByRole("link", { name: "Download Test Run" })).toHaveAttribute("href", "/api/datasets/test-run/download");
+    expect(screen.getByRole("link", { name: "Test Run" })).toHaveAttribute(
+      "href",
+      "/datasets/test-run",
+    );
+    expect(
+      screen.getByRole("link", { name: "Download Test Run" }),
+    ).toHaveAttribute("href", "/api/datasets/test-run/download");
   });
 });

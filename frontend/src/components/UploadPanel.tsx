@@ -46,7 +46,11 @@ export function UploadPanel({ onUploaded }: Props) {
         <Label className="grid gap-1.5">
           Upload Password
           <span className="relative">
-            <LockKeyhole size={14} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-subtle" />
+            <LockKeyhole
+              size={14}
+              aria-hidden="true"
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-subtle"
+            />
             <FieldInput
               type="password"
               placeholder="Upload password"
@@ -75,7 +79,15 @@ export function UploadPanel({ onUploaded }: Props) {
           <Upload size={15} aria-hidden="true" />
           {isUploading ? "Uploading..." : "Upload"}
         </Button>
-        {status && <Alert tone={status.toLowerCase().startsWith("uploaded") ? "success" : "danger"}>{status}</Alert>}
+        {status && (
+          <Alert
+            tone={
+              status.toLowerCase().startsWith("uploaded") ? "success" : "danger"
+            }
+          >
+            {status}
+          </Alert>
+        )}
       </div>
     </Panel>
   );

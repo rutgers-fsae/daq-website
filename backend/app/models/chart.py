@@ -1,10 +1,8 @@
-from typing import Any
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
 from app.config import settings
-
 
 FilterOp = Literal["eq", "contains", "gte", "lte"]
 ChartType = Literal["line", "scatter", "bar", "histogram", "box"]

@@ -31,3 +31,7 @@ infra/.env
 
 # Generated dataset caches
 *.parquet
+
+# Root quality tooling
+node_modules/
+coverage/

@@ -14,6 +14,9 @@ export type ChartRequest = {
   filters: FilterRule[];
 };
 
-export type ChartConfig = Pick<ChartRequest, "chart_type" | "x_column" | "y_columns" | "filters">;
+export type ChartConfig = Pick<
+  ChartRequest,
+  "chart_type" | "x_column" | "y_columns" | "filters"
+>;
 
 export type PlotTrace = Record<string, unknown>;

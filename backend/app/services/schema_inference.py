@@ -11,7 +11,9 @@ def infer_type(series: pd.Series) -> str:
     return "categorical"
 
 
-def infer_schema(df: pd.DataFrame, units_by_column: dict[str, str | None] | None = None) -> list[dict[str, Any]]:
+def infer_schema(
+    df: pd.DataFrame, units_by_column: dict[str, str | None] | None = None
+) -> list[dict[str, Any]]:
     schema = []
     units_by_column = units_by_column or {}
     for col in df.columns:

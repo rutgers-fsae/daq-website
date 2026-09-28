@@ -23,7 +23,13 @@ vi.mock("plotly.js-cartesian-dist-min", () => ({
   default: {},
 }));
 
-const baseTrace = { name: "Speed", x: [0, 1], y: [10, 20], type: "scatter", mode: "lines" };
+const baseTrace = {
+  name: "Speed",
+  x: [0, 1],
+  y: [10, 20],
+  type: "scatter",
+  mode: "lines",
+};
 
 describe("PlotView", () => {
   beforeEach(() => {
@@ -47,16 +53,16 @@ describe("PlotView", () => {
     await screen.findByTestId("plot");
 
     expect(plotState.lastProps?.layout).not.toHaveProperty("yaxis2");
-    expect(plotState.lastProps?.data[0]).toMatchObject({ name: "Speed (mph)", yaxis: "y" });
+    expect(plotState.lastProps?.data[0]).toMatchObject({
+      name: "Speed (mph)",
+      yaxis: "y",
+    });
   });
 
   it("includes the secondary y axis only for dual-axis charts", async () => {
     render(
       <PlotView
-        data={[
-          baseTrace,
-          { ...baseTrace, name: "Voltage", y: [300, 310] },
-        ]}
+        data={[baseTrace, { ...baseTrace, name: "Voltage", y: [300, 310] }]}
         theme="light"
         axisTitles={{
           xTitle: "Time (s)",
@@ -82,10 +88,7 @@ describe("PlotView", () => {
   it("uses a visible second trace color in dark mode", async () => {
     render(
       <PlotView
-        data={[
-          baseTrace,
-          { ...baseTrace, name: "Voltage", y: [300, 310] },
-        ]}
+        data={[baseTrace, { ...baseTrace, name: "Voltage", y: [300, 310] }]}
         theme="dark"
         axisTitles={null}
       />,
@@ -108,7 +111,9 @@ describe("PlotView", () => {
     );
 
     await screen.findByTestId("plot");
-    expect(screen.getByRole("table", { name: "Visible range statistics" })).toHaveTextContent("20");
+    expect(
+      screen.getByRole("table", { name: "Visible range statistics" }),
+    ).toHaveTextContent("20");
 
     act(() => {
       plotState.lastProps?.onRelayout?.({
@@ -120,16 +125,25 @@ describe("PlotView", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole("table", { name: "Visible range statistics" })).toHaveTextContent("30");
+      expect(
+        screen.getByRole("table", { name: "Visible range statistics" }),
+      ).toHaveTextContent("30");
     });
-    expect(screen.getByRole("table", { name: "Visible range statistics" })).not.toHaveTextContent("20");
+    expect(
+      screen.getByRole("table", { name: "Visible range statistics" }),
+    ).not.toHaveTextContent("20");
 
     act(() => {
-      plotState.lastProps?.onRelayout?.({ "xaxis.autorange": true, "yaxis.autorange": true });
+      plotState.lastProps?.onRelayout?.({
+        "xaxis.autorange": true,
+        "yaxis.autorange": true,
+      });
     });
 
     await waitFor(() => {
-      expect(screen.getByRole("table", { name: "Visible range statistics" })).toHaveTextContent("20");
+      expect(
+        screen.getByRole("table", { name: "Visible range statistics" }),
+      ).toHaveTextContent("20");
     });
   });
 
@@ -143,7 +157,9 @@ describe("PlotView", () => {
     );
 
     await screen.findByTestId("plot");
-    expect(screen.queryByRole("table", { name: "Visible range statistics" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("table", { name: "Visible range statistics" }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows Plotly render errors instead of a blank plot", async () => {
@@ -151,11 +167,17 @@ describe("PlotView", () => {
 
     await screen.findByTestId("plot");
     act(() => {
-      plotState.lastProps?.onError?.(new Error("Cannot read properties of undefined"));
+      plotState.lastProps?.onError?.(
+        new Error("Cannot read properties of undefined"),
+      );
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/Chart render failed: Cannot read properties of undefined/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          /Chart render failed: Cannot read properties of undefined/i,
+        ),
+      ).toBeInTheDocument();
     });
   });
 });

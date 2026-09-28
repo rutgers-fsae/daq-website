@@ -1,24 +1,56 @@
 import { describe, expect, it } from "vitest";
-import { calculateVisibleStatistics, formatStatistic, updateVisibleRanges } from "./plotStatistics";
+import {
+  calculateVisibleStatistics,
+  formatStatistic,
+  updateVisibleRanges,
+} from "./plotStatistics";
 
 const colors = ["#f00", "#0ff"];
 
 describe("plot statistics", () => {
   it("calculates statistics for finite points inside the full viewport", () => {
     const [statistics] = calculateVisibleStatistics(
-      [{ name: "Speed", x: [0, 1, 2, 3], y: [10, 20, null, 40], type: "scatter", mode: "lines" }],
+      [
+        {
+          name: "Speed",
+          x: [0, 1, 2, 3],
+          y: [10, 20, null, 40],
+          type: "scatter",
+          mode: "lines",
+        },
+      ],
       { x: [1, 3], y: [15, 35] },
       colors,
     );
 
-    expect(statistics).toMatchObject({ name: "Speed", average: 20, min: 20, max: 20, rms: 20 });
+    expect(statistics).toMatchObject({
+      name: "Speed",
+      average: 20,
+      min: 20,
+      max: 20,
+      rms: 20,
+    });
   });
 
   it("uses each trace's assigned y-axis range and accepts reversed bounds", () => {
     const statistics = calculateVisibleStatistics(
       [
-        { name: "Speed", x: [0, 1], y: [10, 20], type: "scatter", mode: "lines", yaxis: "y" },
-        { name: "Voltage", x: [0, 1], y: [300, 400], type: "scatter", mode: "lines", yaxis: "y2" },
+        {
+          name: "Speed",
+          x: [0, 1],
+          y: [10, 20],
+          type: "scatter",
+          mode: "lines",
+          yaxis: "y",
+        },
+        {
+          name: "Voltage",
+          x: [0, 1],
+          y: [300, 400],
+          type: "scatter",
+          mode: "lines",
+          yaxis: "y2",
+        },
       ],
       { x: [1, 0], y: [15, 25], y2: [450, 350] },
       colors,
@@ -30,7 +62,15 @@ describe("plot statistics", () => {
 
   it("calculates RMS independently from the average", () => {
     const [statistics] = calculateVisibleStatistics(
-      [{ name: "Signal", x: [0, 1], y: [-3, 3], type: "scatter", mode: "markers" }],
+      [
+        {
+          name: "Signal",
+          x: [0, 1],
+          y: [-3, 3],
+          type: "scatter",
+          mode: "markers",
+        },
+      ],
       {},
       colors,
     );
@@ -54,7 +94,15 @@ describe("plot statistics", () => {
       colors,
     );
     const [categories] = calculateVisibleStatistics(
-      [{ name: "Laps", x: ["A", "B", "C"], y: [10, 20, 30], type: "scatter", mode: "markers" }],
+      [
+        {
+          name: "Laps",
+          x: ["A", "B", "C"],
+          y: [10, 20, 30],
+          type: "scatter",
+          mode: "markers",
+        },
+      ],
       { x: [0.5, 2] },
       colors,
     );
@@ -75,18 +123,26 @@ describe("plot statistics", () => {
       colors,
     );
 
-    expect(empty[0]).toMatchObject({ rms: null, average: null, min: null, max: null });
+    expect(empty[0]).toMatchObject({
+      rms: null,
+      average: null,
+      min: null,
+      max: null,
+    });
     expect(unsupported).toEqual([]);
     expect(formatStatistic(null)).toBe("N/A");
     expect(formatStatistic(12345.67)).toBe("12,350");
   });
 
   it("updates individual ranges and clears axes on autorange", () => {
-    const zoomed = updateVisibleRanges({}, {
-      "xaxis.range[0]": 1,
-      "xaxis.range[1]": 3,
-      "yaxis.range": [10, 20],
-    });
+    const zoomed = updateVisibleRanges(
+      {},
+      {
+        "xaxis.range[0]": 1,
+        "xaxis.range[1]": 3,
+        "yaxis.range": [10, 20],
+      },
+    );
     const reset = updateVisibleRanges(zoomed, { "xaxis.autorange": true });
 
     expect(zoomed).toEqual({ x: [1, 3], y: [10, 20] });

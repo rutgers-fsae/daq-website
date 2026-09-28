@@ -7,7 +7,6 @@ from fastapi import Header
 from app.config import settings
 from app.core.errors import unauthorized
 
-
 _attempts: dict[str, deque[float]] = defaultdict(deque)
 
 

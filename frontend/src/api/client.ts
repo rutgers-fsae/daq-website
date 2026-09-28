@@ -1,6 +1,9 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
-export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+export async function apiFetch<T>(
+  path: string,
+  init?: RequestInit,
+): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, init);
   if (!response.ok) {
     const text = await response.text();
@@ -17,15 +20,22 @@ export function errorMessageFromResponse(text: string): string {
       return body.detail;
     }
     if (Array.isArray(body.detail) && body.detail.length > 0) {
-      return body.detail
-        .map((item) => {
-          if (item && typeof item === "object" && "msg" in item && typeof item.msg === "string") {
-            return item.msg;
-          }
-          return null;
-        })
-        .filter(Boolean)
-        .join(", ") || "Request failed";
+      return (
+        body.detail
+          .map((item) => {
+            if (
+              item &&
+              typeof item === "object" &&
+              "msg" in item &&
+              typeof item.msg === "string"
+            ) {
+              return item.msg;
+            }
+            return null;
+          })
+          .filter(Boolean)
+          .join(", ") || "Request failed"
+      );
     }
   } catch {
     return text;

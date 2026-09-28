@@ -23,8 +23,12 @@ class DatasetRegistry:
         return [DatasetRecord.model_validate(item) for item in payload]
 
     def _write(self, records: list[DatasetRecord]) -> None:
-        payload = json.dumps([item.model_dump(mode="json") for item in records], indent=2)
-        tmp_path = self.path.with_suffix(f"{self.path.suffix}.{os.getpid()}.{threading.get_ident()}.tmp")
+        payload = json.dumps(
+            [item.model_dump(mode="json") for item in records], indent=2
+        )
+        tmp_path = self.path.with_suffix(
+            f"{self.path.suffix}.{os.getpid()}.{threading.get_ident()}.tmp"
+        )
         tmp_path.write_text(payload, encoding="utf-8")
         os.replace(tmp_path, self.path)
 
@@ -50,7 +54,9 @@ class DatasetRegistry:
                     return updated
         raise not_found("Dataset not found")
 
-    def register(self, filename: str, size_bytes: int, original_name: str | None = None) -> DatasetRecord:
+    def register(
+        self, filename: str, size_bytes: int, original_name: str | None = None
+    ) -> DatasetRecord:
         with self._lock:
             records = self._read()
             existing = {item.slug for item in records}

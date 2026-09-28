@@ -17,10 +17,14 @@ describe("Tooltip", () => {
 
     const trigger = screen.getByRole("button", { name: "Remove graph" });
     await user.hover(trigger);
-    expect(await screen.findByRole("tooltip")).toHaveTextContent("Remove graph");
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Remove graph",
+    );
 
     await user.unhover(trigger);
     trigger.focus();
-    expect(await screen.findByRole("tooltip")).toHaveTextContent("Remove graph");
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Remove graph",
+    );
   });
 });

@@ -1,4 +1,8 @@
-import { forwardRef, type ComponentPropsWithoutRef, type ComponentRef } from "react";
+import {
+  forwardRef,
+  type ComponentPropsWithoutRef,
+  type ComponentRef,
+} from "react";
 import { Command as CommandPrimitive } from "cmdk";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -7,7 +11,13 @@ export const Command = forwardRef<
   ComponentRef<typeof CommandPrimitive>,
   ComponentPropsWithoutRef<typeof CommandPrimitive>
 >(function Command({ className, ...props }, ref) {
-  return <CommandPrimitive ref={ref} className={cn("flex w-full flex-col overflow-hidden", className)} {...props} />;
+  return (
+    <CommandPrimitive
+      ref={ref}
+      className={cn("flex w-full flex-col overflow-hidden", className)}
+      {...props}
+    />
+  );
 });
 
 export const CommandInput = forwardRef<
@@ -15,8 +25,15 @@ export const CommandInput = forwardRef<
   ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
 >(function CommandInput({ className, ...props }, ref) {
   return (
-    <div className="flex items-center border-b border-border px-3" cmdk-input-wrapper="">
-      <Search size={14} aria-hidden="true" className="mr-2 shrink-0 text-muted" />
+    <div
+      className="flex items-center border-b border-border px-3"
+      cmdk-input-wrapper=""
+    >
+      <Search
+        size={14}
+        aria-hidden="true"
+        className="mr-2 shrink-0 text-muted"
+      />
       <CommandPrimitive.Input
         ref={ref}
         className={cn(
@@ -33,14 +50,26 @@ export const CommandList = forwardRef<
   ComponentRef<typeof CommandPrimitive.List>,
   ComponentPropsWithoutRef<typeof CommandPrimitive.List>
 >(function CommandList({ className, ...props }, ref) {
-  return <CommandPrimitive.List ref={ref} className={cn("max-h-64 overflow-y-auto p-1", className)} {...props} />;
+  return (
+    <CommandPrimitive.List
+      ref={ref}
+      className={cn("max-h-64 overflow-y-auto p-1", className)}
+      {...props}
+    />
+  );
 });
 
 export const CommandEmpty = forwardRef<
   ComponentRef<typeof CommandPrimitive.Empty>,
   ComponentPropsWithoutRef<typeof CommandPrimitive.Empty>
 >(function CommandEmpty({ className, ...props }, ref) {
-  return <CommandPrimitive.Empty ref={ref} className={cn("py-5 text-center text-sm text-muted", className)} {...props} />;
+  return (
+    <CommandPrimitive.Empty
+      ref={ref}
+      className={cn("py-5 text-center text-sm text-muted", className)}
+      {...props}
+    />
+  );
 });
 
 export const CommandItem = forwardRef<

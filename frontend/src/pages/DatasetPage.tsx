@@ -18,17 +18,60 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ArrowLeft, ChevronDown, Columns2, Download, Filter, GripVertical, LockKeyhole, Plus, Rows2, Trash2, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronDown,
+  Columns2,
+  Download,
+  Filter,
+  GripVertical,
+  LockKeyhole,
+  Plus,
+  Rows2,
+  Trash2,
+  X,
+} from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { ChartBuilder } from "../components/ChartBuilder";
 import { PlotView } from "../components/PlotView";
-import { exportDataset, getChartData, getDataset, updateDatasetMetadata } from "../api/datasets";
+import {
+  exportDataset,
+  getChartData,
+  getDataset,
+  updateDatasetMetadata,
+} from "../api/datasets";
 import { useDatasetSchema } from "../hooks/useDatasetSchema";
-import type { ChartConfig, ChartRequest, FilterRule, PlotTrace } from "../types/chart";
+import type {
+  ChartConfig,
+  ChartRequest,
+  FilterRule,
+  PlotTrace,
+} from "../types/chart";
 import type { Dataset, DatasetMetadata } from "../types/dataset";
-import { Alert, Badge, Button, FieldInput, FieldSelect, FieldTextarea, Label, Panel, Tooltip } from "../components/ui";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../components/ui/collapsible";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "../components/ui/dialog";
+import {
+  Alert,
+  Badge,
+  Button,
+  FieldInput,
+  FieldSelect,
+  FieldTextarea,
+  Label,
+  Panel,
+  Tooltip,
+} from "../components/ui";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "../components/ui/collapsible";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  DialogTrigger,
+} from "../components/ui/dialog";
 import { cxClasses } from "../components/ui-utils";
 
 type Props = {
@@ -51,7 +94,10 @@ type GraphState = {
   isLoading: boolean;
 };
 
-type PersistedGraphState = Pick<GraphState, "id" | "name" | "chartConfig" | "axisTitles">;
+type PersistedGraphState = Pick<
+  GraphState,
+  "id" | "name" | "chartConfig" | "axisTitles"
+>;
 
 type ExportFilterDraft = {
   id: number;
@@ -78,11 +124,14 @@ function emptyMetadata(): DatasetMetadata {
   };
 }
 
-function draftFromMetadata(metadata: DatasetMetadata | undefined): MetadataDraft {
+function draftFromMetadata(
+  metadata: DatasetMetadata | undefined,
+): MetadataDraft {
   const source = metadata ?? emptyMetadata();
   return {
     driver: source.driver,
-    ride_height: source.ride_height === null ? "" : source.ride_height.toFixed(2),
+    ride_height:
+      source.ride_height === null ? "" : source.ride_height.toFixed(2),
     aero_configuration: source.aero_configuration,
     testing_notes: source.testing_notes,
   };
@@ -96,7 +145,10 @@ function metadataFromDraft(draft: MetadataDraft): DatasetMetadata | null {
   }
   return {
     driver: draft.driver,
-    ride_height: numericRideHeight === null ? null : Math.round(numericRideHeight * 100) / 100,
+    ride_height:
+      numericRideHeight === null
+        ? null
+        : Math.round(numericRideHeight * 100) / 100,
     aero_configuration: draft.aero_configuration,
     testing_notes: draft.testing_notes,
   };
@@ -118,7 +170,10 @@ function emptyGraph(id: number, name = `Graph ${id}`): GraphState {
   };
 }
 
-function restoreGraph(item: Partial<GraphState>, fallbackId: number): GraphState {
+function restoreGraph(
+  item: Partial<GraphState>,
+  fallbackId: number,
+): GraphState {
   const id = typeof item.id === "number" ? item.id : fallbackId;
   return {
     ...emptyGraph(id),
@@ -137,20 +192,34 @@ function graphForStorage(graph: GraphState): PersistedGraphState {
   };
 }
 
-function restoreChartConfig(config: Partial<ChartConfig> | undefined): ChartConfig {
+function restoreChartConfig(
+  config: Partial<ChartConfig> | undefined,
+): ChartConfig {
   const chartType = config?.chart_type;
   return {
     chart_type:
-      chartType === "line" || chartType === "scatter" || chartType === "bar" || chartType === "histogram" || chartType === "box"
+      chartType === "line" ||
+      chartType === "scatter" ||
+      chartType === "bar" ||
+      chartType === "histogram" ||
+      chartType === "box"
         ? chartType
         : "line",
-    x_column: typeof config?.x_column === "string" ? config.x_column : undefined,
-    y_columns: Array.isArray(config?.y_columns) ? config.y_columns.filter((item): item is string => typeof item === "string") : [],
+    x_column:
+      typeof config?.x_column === "string" ? config.x_column : undefined,
+    y_columns: Array.isArray(config?.y_columns)
+      ? config.y_columns.filter(
+          (item): item is string => typeof item === "string",
+        )
+      : [],
     filters: Array.isArray(config?.filters)
       ? config.filters.filter(
           (item): item is ChartConfig["filters"][number] =>
             typeof item?.column === "string" &&
-            (item.op === "eq" || item.op === "contains" || item.op === "gte" || item.op === "lte") &&
+            (item.op === "eq" ||
+              item.op === "contains" ||
+              item.op === "gte" ||
+              item.op === "lte") &&
             (typeof item.value === "string" || typeof item.value === "number"),
         )
       : [],
@@ -162,7 +231,9 @@ function chartConfigsEqual(left: ChartConfig, right: ChartConfig): boolean {
     left.chart_type === right.chart_type &&
     left.x_column === right.x_column &&
     left.y_columns.length === right.y_columns.length &&
-    left.y_columns.every((column, index) => column === right.y_columns[index]) &&
+    left.y_columns.every(
+      (column, index) => column === right.y_columns[index],
+    ) &&
     left.filters.length === right.filters.length &&
     left.filters.every(
       (filter, index) =>
@@ -177,7 +248,11 @@ function emptyExportFilter(id: number, column = ""): ExportFilterDraft {
   return { id, column, op: "eq", value: "" };
 }
 
-function exportValueForColumn(value: string, columnType: string | undefined, op: FilterRule["op"]) {
+function exportValueForColumn(
+  value: string,
+  columnType: string | undefined,
+  op: FilterRule["op"],
+) {
   if (columnType !== "numeric" || op === "contains") {
     return value;
   }
@@ -203,30 +278,46 @@ type ExportModalProps = {
 
 function ExportModal({ slug, columns }: ExportModalProps) {
   const [nextFilterId, setNextFilterId] = useState(2);
-  const [filters, setFilters] = useState<ExportFilterDraft[]>(() => [emptyExportFilter(1, columns[0]?.name || "")]);
-  const [selectedColumns, setSelectedColumns] = useState<string[]>(() => columns.map((column) => column.name));
+  const [filters, setFilters] = useState<ExportFilterDraft[]>(() => [
+    emptyExportFilter(1, columns[0]?.name || ""),
+  ]);
+  const [selectedColumns, setSelectedColumns] = useState<string[]>(() =>
+    columns.map((column) => column.name),
+  );
   const [isExporting, setIsExporting] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const available = new Set(columns.map((column) => column.name));
-    setSelectedColumns((current) => current.filter((column) => available.has(column)));
+    setSelectedColumns((current) =>
+      current.filter((column) => available.has(column)),
+    );
     setFilters((current) =>
       current.map((filter) => ({
         ...filter,
-        column: filter.column && available.has(filter.column) ? filter.column : columns[0]?.name || "",
+        column:
+          filter.column && available.has(filter.column)
+            ? filter.column
+            : columns[0]?.name || "",
       })),
     );
   }, [columns]);
 
   function addFilter() {
-    setFilters((current) => [...current, emptyExportFilter(nextFilterId, columns[0]?.name || "")]);
+    setFilters((current) => [
+      ...current,
+      emptyExportFilter(nextFilterId, columns[0]?.name || ""),
+    ]);
     setNextFilterId((current) => current + 1);
   }
 
   function updateFilter(id: number, patch: Partial<ExportFilterDraft>) {
-    setFilters((current) => current.map((filter) => (filter.id === id ? { ...filter, ...patch } : filter)));
+    setFilters((current) =>
+      current.map((filter) =>
+        filter.id === id ? { ...filter, ...patch } : filter,
+      ),
+    );
   }
 
   function removeFilter(id: number) {
@@ -235,7 +326,9 @@ function ExportModal({ slug, columns }: ExportModalProps) {
 
   function toggleColumn(columnName: string) {
     setSelectedColumns((current) =>
-      current.includes(columnName) ? current.filter((column) => column !== columnName) : [...current, columnName],
+      current.includes(columnName)
+        ? current.filter((column) => column !== columnName)
+        : [...current, columnName],
     );
   }
 
@@ -246,13 +339,21 @@ function ExportModal({ slug, columns }: ExportModalProps) {
         return [];
       }
       const column = columns.find((item) => item.name === filter.column);
-      return [{ column: filter.column, op: filter.op, value: exportValueForColumn(value, column?.type, filter.op) }];
+      return [
+        {
+          column: filter.column,
+          op: filter.op,
+          value: exportValueForColumn(value, column?.type, filter.op),
+        },
+      ];
     });
   }
 
   function buildColumns(): string[] {
     const selected = new Set(selectedColumns);
-    return columns.map((column) => column.name).filter((column) => selected.has(column));
+    return columns
+      .map((column) => column.name)
+      .filter((column) => selected.has(column));
   }
 
   async function handleExport() {
@@ -270,144 +371,199 @@ function ExportModal({ slug, columns }: ExportModalProps) {
     }
   }
 
-  const exportDisabled = isExporting || selectedColumns.length === 0 || columns.length === 0;
+  const exportDisabled =
+    isExporting || selectedColumns.length === 0 || columns.length === 0;
 
   return (
-      <DialogContent
-        className="max-w-4xl"
-        aria-describedby="csv-export-description"
-        onOpenAutoFocus={(event) => {
-          event.preventDefault();
-          (event.currentTarget as HTMLElement | null)?.focus();
-        }}
-      >
-        <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <Filter size={16} aria-hidden="true" className="text-button" />
-              <DialogTitle className="text-sm uppercase tracking-[0.16em] text-muted">CSV Export</DialogTitle>
-            </div>
-            <DialogDescription id="csv-export-description" className="mt-1">Select columns and filters for this download.</DialogDescription>
+    <DialogContent
+      className="max-w-4xl"
+      aria-describedby="csv-export-description"
+      onOpenAutoFocus={(event) => {
+        event.preventDefault();
+        (event.currentTarget as HTMLElement | null)?.focus();
+      }}
+    >
+      <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <Filter size={16} aria-hidden="true" className="text-button" />
+            <DialogTitle className="text-sm uppercase tracking-[0.16em] text-muted">
+              CSV Export
+            </DialogTitle>
           </div>
-          <Tooltip label="Close export modal">
-            <DialogClose asChild>
-              <Button type="button" variant="ghost" size="icon" aria-label="Close export modal">
-                <X size={16} aria-hidden="true" />
-              </Button>
-            </DialogClose>
-          </Tooltip>
+          <DialogDescription id="csv-export-description" className="mt-1">
+            Select columns and filters for this download.
+          </DialogDescription>
         </div>
-        <div className="grid gap-4 overflow-y-auto p-4">
-          <section className="grid gap-2 rounded-md border border-border bg-surface p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h4 className="text-sm font-semibold text-text">Columns</h4>
-                <p className="text-xs text-muted">{selectedColumns.length} of {columns.length} selected</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button type="button" onClick={() => setSelectedColumns(columns.map((column) => column.name))} variant="outline" size="sm">
-                  Select All
-                </Button>
-                <Button type="button" onClick={() => setSelectedColumns([])} variant="ghost" size="sm">
-                  Clear
-                </Button>
-              </div>
-            </div>
-            <div className="grid max-h-52 gap-1 overflow-y-auto rounded-md border border-border bg-panel p-2 sm:grid-cols-2 lg:grid-cols-3">
-              {columns.map((column) => (
-                <label key={column.name} className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-sm text-text hover:bg-surface-soft">
-                  <input
-                    type="checkbox"
-                    checked={selectedColumns.includes(column.name)}
-                    onChange={() => toggleColumn(column.name)}
-                    className="h-4 w-4 shrink-0 accent-button"
-                  />
-                  <span className="truncate">{column.display_name || column.name}</span>
-                </label>
-              ))}
-            </div>
-            {selectedColumns.length === 0 && (
-              <Alert tone="warning" className="text-xs">
-                Select at least one column to export.
-              </Alert>
-            )}
-          </section>
-          <section className="grid gap-2 rounded-md border border-border bg-surface p-3">
-            <div>
-              <h4 className="text-sm font-semibold text-text">Filters</h4>
-              <p className="text-xs text-muted">Export filters are separate from graph filters.</p>
-            </div>
-            {filters.map((filter) => (
-              <div key={filter.id} className="grid gap-2 rounded-md border border-border bg-panel p-2 md:grid-cols-[minmax(0,1.4fr)_minmax(120px,0.6fr)_minmax(0,1fr)_auto]">
-                <Label className="grid gap-1">
-                  Column
-                  <FieldSelect
-                    value={filter.column}
-                    onChange={(event) => updateFilter(filter.id, { column: event.target.value })}
-                    aria-label="Export filter column"
-                  >
-                    {columns.map((column) => (
-                      <option key={column.name} value={column.name}>
-                        {column.display_name || column.name}
-                      </option>
-                    ))}
-                  </FieldSelect>
-                </Label>
-                <Label className="grid gap-1">
-                  Operator
-                  <FieldSelect
-                    value={filter.op}
-                    onChange={(event) => updateFilter(filter.id, { op: event.target.value as FilterRule["op"] })}
-                    aria-label="Export filter operator"
-                  >
-                    <option value="eq">Equals</option>
-                    <option value="contains">Contains</option>
-                    <option value="gte">At least</option>
-                    <option value="lte">At most</option>
-                  </FieldSelect>
-                </Label>
-                <Label className="grid gap-1">
-                  Value
-                  <FieldInput
-                    value={filter.value}
-                    onChange={(event) => updateFilter(filter.id, { value: event.target.value })}
-                    aria-label="Export filter value"
-                    placeholder="Any value"
-                  />
-                </Label>
-                <Tooltip label="Remove export filter">
-                  <Button
-                    type="button"
-                    onClick={() => removeFilter(filter.id)}
-                    disabled={filters.length === 1}
-                    variant="ghost"
-                    size="icon"
-                    className="self-end"
-                    aria-label="Remove export filter"
-                  >
-                    <X size={15} aria-hidden="true" />
-                  </Button>
-                </Tooltip>
-              </div>
-            ))}
-            <Button type="button" onClick={addFilter} disabled={columns.length === 0} variant="outline" className="justify-self-start">
-              <Plus size={15} aria-hidden="true" />
-              Add Export Filter
-            </Button>
-            {status && <Alert tone="success">{status}</Alert>}
-            {error && <Alert tone="danger">{error}</Alert>}
-          </section>
-        </div>
-        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border px-4 py-3">
+        <Tooltip label="Close export modal">
           <DialogClose asChild>
-            <Button type="button" variant="ghost">Cancel</Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Close export modal"
+            >
+              <X size={16} aria-hidden="true" />
+            </Button>
           </DialogClose>
-          <Button type="button" onClick={handleExport} disabled={exportDisabled} variant="primary">
-            <Download size={15} aria-hidden="true" />
-            {isExporting ? "Exporting..." : "Export CSV"}
+        </Tooltip>
+      </div>
+      <div className="grid gap-4 overflow-y-auto p-4">
+        <section className="grid gap-2 rounded-md border border-border bg-surface p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h4 className="text-sm font-semibold text-text">Columns</h4>
+              <p className="text-xs text-muted">
+                {selectedColumns.length} of {columns.length} selected
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                onClick={() =>
+                  setSelectedColumns(columns.map((column) => column.name))
+                }
+                variant="outline"
+                size="sm"
+              >
+                Select All
+              </Button>
+              <Button
+                type="button"
+                onClick={() => setSelectedColumns([])}
+                variant="ghost"
+                size="sm"
+              >
+                Clear
+              </Button>
+            </div>
+          </div>
+          <div className="grid max-h-52 gap-1 overflow-y-auto rounded-md border border-border bg-panel p-2 sm:grid-cols-2 lg:grid-cols-3">
+            {columns.map((column) => (
+              <label
+                key={column.name}
+                className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-sm text-text hover:bg-surface-soft"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedColumns.includes(column.name)}
+                  onChange={() => toggleColumn(column.name)}
+                  className="h-4 w-4 shrink-0 accent-button"
+                />
+                <span className="truncate">
+                  {column.display_name || column.name}
+                </span>
+              </label>
+            ))}
+          </div>
+          {selectedColumns.length === 0 && (
+            <Alert tone="warning" className="text-xs">
+              Select at least one column to export.
+            </Alert>
+          )}
+        </section>
+        <section className="grid gap-2 rounded-md border border-border bg-surface p-3">
+          <div>
+            <h4 className="text-sm font-semibold text-text">Filters</h4>
+            <p className="text-xs text-muted">
+              Export filters are separate from graph filters.
+            </p>
+          </div>
+          {filters.map((filter) => (
+            <div
+              key={filter.id}
+              className="grid gap-2 rounded-md border border-border bg-panel p-2 md:grid-cols-[minmax(0,1.4fr)_minmax(120px,0.6fr)_minmax(0,1fr)_auto]"
+            >
+              <Label className="grid gap-1">
+                Column
+                <FieldSelect
+                  value={filter.column}
+                  onChange={(event) =>
+                    updateFilter(filter.id, { column: event.target.value })
+                  }
+                  aria-label="Export filter column"
+                >
+                  {columns.map((column) => (
+                    <option key={column.name} value={column.name}>
+                      {column.display_name || column.name}
+                    </option>
+                  ))}
+                </FieldSelect>
+              </Label>
+              <Label className="grid gap-1">
+                Operator
+                <FieldSelect
+                  value={filter.op}
+                  onChange={(event) =>
+                    updateFilter(filter.id, {
+                      op: event.target.value as FilterRule["op"],
+                    })
+                  }
+                  aria-label="Export filter operator"
+                >
+                  <option value="eq">Equals</option>
+                  <option value="contains">Contains</option>
+                  <option value="gte">At least</option>
+                  <option value="lte">At most</option>
+                </FieldSelect>
+              </Label>
+              <Label className="grid gap-1">
+                Value
+                <FieldInput
+                  value={filter.value}
+                  onChange={(event) =>
+                    updateFilter(filter.id, { value: event.target.value })
+                  }
+                  aria-label="Export filter value"
+                  placeholder="Any value"
+                />
+              </Label>
+              <Tooltip label="Remove export filter">
+                <Button
+                  type="button"
+                  onClick={() => removeFilter(filter.id)}
+                  disabled={filters.length === 1}
+                  variant="ghost"
+                  size="icon"
+                  className="self-end"
+                  aria-label="Remove export filter"
+                >
+                  <X size={15} aria-hidden="true" />
+                </Button>
+              </Tooltip>
+            </div>
+          ))}
+          <Button
+            type="button"
+            onClick={addFilter}
+            disabled={columns.length === 0}
+            variant="outline"
+            className="justify-self-start"
+          >
+            <Plus size={15} aria-hidden="true" />
+            Add Export Filter
           </Button>
-        </div>
-      </DialogContent>
+          {status && <Alert tone="success">{status}</Alert>}
+          {error && <Alert tone="danger">{error}</Alert>}
+        </section>
+      </div>
+      <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border px-4 py-3">
+        <DialogClose asChild>
+          <Button type="button" variant="ghost">
+            Cancel
+          </Button>
+        </DialogClose>
+        <Button
+          type="button"
+          onClick={handleExport}
+          disabled={exportDisabled}
+          variant="primary"
+        >
+          <Download size={15} aria-hidden="true" />
+          {isExporting ? "Exporting..." : "Export CSV"}
+        </Button>
+      </div>
+    </DialogContent>
   );
 }
 
@@ -444,7 +600,14 @@ function SortableGraphCard({
   onConfigChange,
   onRun,
 }: SortableGraphCardProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: graph.id });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: graph.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -452,13 +615,19 @@ function SortableGraphCard({
   };
 
   const displayName = graph.name.trim() || `Graph ${index + 1}`;
-  const handleConfigChange = useCallback((config: ChartConfig) => onConfigChange(graph.id, config), [graph.id, onConfigChange]);
+  const handleConfigChange = useCallback(
+    (config: ChartConfig) => onConfigChange(graph.id, config),
+    [graph.id, onConfigChange],
+  );
 
   return (
     <article
       ref={setNodeRef}
       style={style}
-      className={cxClasses("grid gap-3 rounded-lg border border-border bg-panel p-3 shadow-sm shadow-black/5 transition", isDragging && "opacity-85 shadow-2xl")}
+      className={cxClasses(
+        "grid gap-3 rounded-lg border border-border bg-panel p-3 shadow-sm shadow-black/5 transition",
+        isDragging && "opacity-85 shadow-2xl",
+      )}
     >
       <div className="flex items-center justify-between gap-2 border-b border-border pb-3">
         <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -483,7 +652,9 @@ function SortableGraphCard({
             aria-label={`Graph ${index + 1} name`}
             maxLength={60}
           />
-          <Badge tone="default" className="hidden shrink-0 sm:inline-flex">{graph.plotData.length} traces</Badge>
+          <Badge tone="default" className="hidden shrink-0 sm:inline-flex">
+            {graph.plotData.length} traces
+          </Badge>
         </div>
         <Tooltip label={`Remove ${displayName}`}>
           <Button
@@ -504,14 +675,18 @@ function SortableGraphCard({
         onConfigChange={handleConfigChange}
         onRun={(payload, titles) => onRun(graph.id, payload, titles)}
       />
-      {graph.isLoading && <p className="text-sm text-muted">Rendering graph...</p>}
+      {graph.isLoading && (
+        <p className="text-sm text-muted">Rendering graph...</p>
+      )}
       {graph.chartError && (
-        <Alert tone="danger">
-          Chart load failed: {graph.chartError}
-        </Alert>
+        <Alert tone="danger">Chart load failed: {graph.chartError}</Alert>
       )}
       <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-inner">
-        <PlotView data={graph.plotData} theme={theme} axisTitles={graph.axisTitles} />
+        <PlotView
+          data={graph.plotData}
+          theme={theme}
+          axisTitles={graph.axisTitles}
+        />
       </div>
     </article>
   );
@@ -523,11 +698,17 @@ export function DatasetPage({ theme }: Props) {
   const [dataset, setDataset] = useState<Dataset | null>(null);
   const [datasetLoading, setDatasetLoading] = useState(true);
   const [datasetError, setDatasetError] = useState<string | null>(null);
-  const [metadataDraft, setMetadataDraft] = useState<MetadataDraft>(() => draftFromMetadata(emptyMetadata()));
+  const [metadataDraft, setMetadataDraft] = useState<MetadataDraft>(() =>
+    draftFromMetadata(emptyMetadata()),
+  );
   const [metadataPassword, setMetadataPassword] = useState("");
-  const [lastSavedMetadata, setLastSavedMetadata] = useState(() => serializeMetadata(emptyMetadata()));
+  const [lastSavedMetadata, setLastSavedMetadata] = useState(() =>
+    serializeMetadata(emptyMetadata()),
+  );
   const [metadataSaveState, setMetadataSaveState] = useState<SaveState>("idle");
-  const [metadataSaveError, setMetadataSaveError] = useState<string | null>(null);
+  const [metadataSaveError, setMetadataSaveError] = useState<string | null>(
+    null,
+  );
   const [nextGraphId, setNextGraphId] = useState(2);
   const [graphs, setGraphs] = useState<GraphState[]>(() => {
     const key = `daq-graphs-${slug}`;
@@ -554,19 +735,20 @@ export function DatasetPage({ theme }: Props) {
 
   const sensors = useSensors(
     useSensor(PointerSensor),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
   function addGraph() {
-    setGraphs((prev) => [
-      ...prev,
-      emptyGraph(nextGraphId),
-    ]);
+    setGraphs((prev) => [...prev, emptyGraph(nextGraphId)]);
     setNextGraphId((prev) => prev + 1);
   }
 
   function removeGraph(id: number) {
-    setGraphs((prev) => (prev.length > 1 ? prev.filter((graph) => graph.id !== id) : prev));
+    setGraphs((prev) =>
+      prev.length > 1 ? prev.filter((graph) => graph.id !== id) : prev,
+    );
   }
 
   function handleDragStart(event: DragStartEvent) {
@@ -598,29 +780,48 @@ export function DatasetPage({ theme }: Props) {
     localStorage.setItem("daq-graph-layout", mode);
   }
 
-  const activeGraph = useMemo(() => graphs.find((graph) => graph.id === activeGraphId) ?? null, [graphs, activeGraphId]);
+  const activeGraph = useMemo(
+    () => graphs.find((graph) => graph.id === activeGraphId) ?? null,
+    [graphs, activeGraphId],
+  );
   const metadataForSave = metadataFromDraft(metadataDraft);
-  const metadataDirty = Boolean(metadataForSave && serializeMetadata(metadataForSave) !== lastSavedMetadata);
+  const metadataDirty = Boolean(
+    metadataForSave && serializeMetadata(metadataForSave) !== lastSavedMetadata,
+  );
 
   function renameGraph(id: number, name: string) {
-    setGraphs((prev) => prev.map((graph) => (graph.id === id ? { ...graph, name } : graph)));
+    setGraphs((prev) =>
+      prev.map((graph) => (graph.id === id ? { ...graph, name } : graph)),
+    );
   }
 
-  const updateGraphConfig = useCallback((id: number, chartConfig: ChartConfig) => {
-    setGraphs((prev) =>
-      prev.map((graph) => {
-        if (graph.id !== id || chartConfigsEqual(graph.chartConfig, chartConfig)) {
-          return graph;
-        }
-        return { ...graph, chartConfig };
-      }),
-    );
-  }, []);
+  const updateGraphConfig = useCallback(
+    (id: number, chartConfig: ChartConfig) => {
+      setGraphs((prev) =>
+        prev.map((graph) => {
+          if (
+            graph.id !== id ||
+            chartConfigsEqual(graph.chartConfig, chartConfig)
+          ) {
+            return graph;
+          }
+          return { ...graph, chartConfig };
+        }),
+      );
+    },
+    [],
+  );
 
   useEffect(() => {
-    const maxGraphId = graphs.reduce((acc, graph) => Math.max(acc, graph.id), 1);
+    const maxGraphId = graphs.reduce(
+      (acc, graph) => Math.max(acc, graph.id),
+      1,
+    );
     setNextGraphId(maxGraphId + 1);
-    localStorage.setItem(`daq-graphs-${slug}`, JSON.stringify(graphs.map(graphForStorage)));
+    localStorage.setItem(
+      `daq-graphs-${slug}`,
+      JSON.stringify(graphs.map(graphForStorage)),
+    );
   }, [graphs, slug]);
 
   useEffect(() => {
@@ -637,11 +838,17 @@ export function DatasetPage({ theme }: Props) {
         const nextDraft = draftFromMetadata(result.metadata);
         setDataset(result);
         setMetadataDraft(nextDraft);
-        setLastSavedMetadata(serializeMetadata(metadataFromDraft(nextDraft) ?? emptyMetadata()));
+        setLastSavedMetadata(
+          serializeMetadata(metadataFromDraft(nextDraft) ?? emptyMetadata()),
+        );
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setDatasetError(err instanceof Error ? err.message : "Failed to load dataset metadata");
+        setDatasetError(
+          err instanceof Error
+            ? err.message
+            : "Failed to load dataset metadata",
+        );
       })
       .finally(() => {
         if (!cancelled) {
@@ -681,13 +888,17 @@ export function DatasetPage({ theme }: Props) {
           const nextDraft = draftFromMetadata(updated.metadata);
           setDataset(updated);
           setMetadataDraft(nextDraft);
-          setLastSavedMetadata(serializeMetadata(metadataFromDraft(nextDraft) ?? emptyMetadata()));
+          setLastSavedMetadata(
+            serializeMetadata(metadataFromDraft(nextDraft) ?? emptyMetadata()),
+          );
           setMetadataSaveState("saved");
         })
         .catch((err: unknown) => {
           if (cancelled) return;
           setMetadataSaveState("error");
-          setMetadataSaveError(err instanceof Error ? err.message : "Failed to save metadata");
+          setMetadataSaveError(
+            err instanceof Error ? err.message : "Failed to save metadata",
+          );
         });
     }, 600);
 
@@ -695,7 +906,15 @@ export function DatasetPage({ theme }: Props) {
       cancelled = true;
       window.clearTimeout(timeout);
     };
-  }, [dataset, datasetError, datasetLoading, lastSavedMetadata, metadataDraft, metadataPassword, slug]);
+  }, [
+    dataset,
+    datasetError,
+    datasetLoading,
+    lastSavedMetadata,
+    metadataDraft,
+    metadataPassword,
+    slug,
+  ]);
 
   const graphGridClass = `grid grid-cols-1 gap-4 ${desktopLayout === "one" ? "lg:grid-cols-1" : "lg:grid-cols-2"}`;
 
@@ -712,7 +931,9 @@ export function DatasetPage({ theme }: Props) {
   ) {
     setGraphs((prev) =>
       prev.map((graph) =>
-        graph.id === graphId ? { ...graph, chartError: null, isLoading: true } : graph,
+        graph.id === graphId
+          ? { ...graph, chartError: null, isLoading: true }
+          : graph,
       ),
     );
     try {
@@ -736,7 +957,10 @@ export function DatasetPage({ theme }: Props) {
           graph.id === graphId
             ? {
                 ...graph,
-                chartError: err instanceof Error ? err.message : "Failed to load chart data",
+                chartError:
+                  err instanceof Error
+                    ? err.message
+                    : "Failed to load chart data",
                 plotData: [],
                 axisTitles: null,
                 isLoading: false,
@@ -767,10 +991,14 @@ export function DatasetPage({ theme }: Props) {
 
   const metadataStatus = (() => {
     if (!metadataForSave) return <Badge tone="danger">Invalid</Badge>;
-    if (metadataDirty && !metadataPassword) return <Badge tone="warning">Password Required</Badge>;
-    if (metadataSaveState === "saving") return <Badge tone="info">Saving</Badge>;
-    if (metadataSaveState === "saved") return <Badge tone="success">Saved</Badge>;
-    if (metadataSaveState === "error") return <Badge tone="danger">Error</Badge>;
+    if (metadataDirty && !metadataPassword)
+      return <Badge tone="warning">Password Required</Badge>;
+    if (metadataSaveState === "saving")
+      return <Badge tone="info">Saving</Badge>;
+    if (metadataSaveState === "saved")
+      return <Badge tone="success">Saved</Badge>;
+    if (metadataSaveState === "error")
+      return <Badge tone="danger">Error</Badge>;
     return <Badge tone="default">Idle</Badge>;
   })();
 
@@ -778,13 +1006,18 @@ export function DatasetPage({ theme }: Props) {
     <main className="grid gap-4">
       <Panel className="flex flex-wrap items-center justify-between gap-3 p-3">
         <div className="min-w-0">
-          <Link to="/" className="inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-text">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-text"
+          >
             <ArrowLeft size={15} aria-hidden="true" />
             Back to datasets
           </Link>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <h2 className="truncate text-lg font-semibold">Dataset: {slug}</h2>
-            {!loading && !error && <Badge tone="info">{columns.length} channels</Badge>}
+            {!loading && !error && (
+              <Badge tone="info">{columns.length} channels</Badge>
+            )}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -799,11 +1032,7 @@ export function DatasetPage({ theme }: Props) {
               <ExportModal slug={slug} columns={columns} />
             )}
           </Dialog>
-          <Button
-            type="button"
-            onClick={addGraph}
-            variant="primary"
-          >
+          <Button type="button" onClick={addGraph} variant="primary">
             <Plus size={15} aria-hidden="true" />
             Add New Graph
           </Button>
@@ -814,8 +1043,7 @@ export function DatasetPage({ theme }: Props) {
               variant={desktopLayout === "one" ? "primary" : "ghost"}
               size="sm"
             >
-              <Rows2 size={14} aria-hidden="true" />
-              1 Column
+              <Rows2 size={14} aria-hidden="true" />1 Column
             </Button>
             <Button
               type="button"
@@ -823,14 +1051,17 @@ export function DatasetPage({ theme }: Props) {
               variant={desktopLayout === "two" ? "primary" : "ghost"}
               size="sm"
             >
-              <Columns2 size={14} aria-hidden="true" />
-              2 Columns
+              <Columns2 size={14} aria-hidden="true" />2 Columns
             </Button>
           </div>
         </div>
       </Panel>
       <Panel className="p-4">
-        <Collapsible open={isMetadataOpen} onOpenChange={setIsMetadataOpen} className="grid gap-4">
+        <Collapsible
+          open={isMetadataOpen}
+          onOpenChange={setIsMetadataOpen}
+          className="grid gap-4"
+        >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <h3 className="text-base font-semibold">Testing Metadata</h3>
@@ -855,17 +1086,28 @@ export function DatasetPage({ theme }: Props) {
               </CollapsibleTrigger>
             </div>
           </div>
-          <CollapsibleContent id="testing-metadata-content" className="grid gap-4">
-            {datasetError && <Alert tone="danger">Metadata load failed: {datasetError}</Alert>}
+          <CollapsibleContent
+            id="testing-metadata-content"
+            className="grid gap-4"
+          >
+            {datasetError && (
+              <Alert tone="danger">Metadata load failed: {datasetError}</Alert>
+            )}
             <div className="grid gap-3 md:grid-cols-3">
               <Label className="grid gap-1.5">
                 Upload Password
                 <span className="relative">
-                  <LockKeyhole size={14} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-subtle" />
+                  <LockKeyhole
+                    size={14}
+                    aria-hidden="true"
+                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-subtle"
+                  />
                   <FieldInput
                     type="password"
                     value={metadataPassword}
-                    onChange={(event) => setMetadataPassword(event.target.value)}
+                    onChange={(event) =>
+                      setMetadataPassword(event.target.value)
+                    }
                     className="pl-9"
                     disabled={datasetLoading}
                     aria-label="Metadata upload password"
@@ -877,7 +1119,9 @@ export function DatasetPage({ theme }: Props) {
                 <FieldInput
                   type="text"
                   value={metadataDraft.driver}
-                  onChange={(event) => updateMetadataDraft({ driver: event.target.value })}
+                  onChange={(event) =>
+                    updateMetadataDraft({ driver: event.target.value })
+                  }
                   disabled={datasetLoading || Boolean(datasetError)}
                 />
               </Label>
@@ -887,7 +1131,9 @@ export function DatasetPage({ theme }: Props) {
                   type="number"
                   step="0.01"
                   value={metadataDraft.ride_height}
-                  onChange={(event) => updateMetadataDraft({ ride_height: event.target.value })}
+                  onChange={(event) =>
+                    updateMetadataDraft({ ride_height: event.target.value })
+                  }
                   onBlur={normalizeRideHeightDraft}
                   disabled={datasetLoading || Boolean(datasetError)}
                 />
@@ -897,7 +1143,11 @@ export function DatasetPage({ theme }: Props) {
                 <FieldInput
                   type="text"
                   value={metadataDraft.aero_configuration}
-                  onChange={(event) => updateMetadataDraft({ aero_configuration: event.target.value })}
+                  onChange={(event) =>
+                    updateMetadataDraft({
+                      aero_configuration: event.target.value,
+                    })
+                  }
                   disabled={datasetLoading || Boolean(datasetError)}
                 />
               </Label>
@@ -905,12 +1155,16 @@ export function DatasetPage({ theme }: Props) {
                 Testing Notes
                 <FieldTextarea
                   value={metadataDraft.testing_notes}
-                  onChange={(event) => updateMetadataDraft({ testing_notes: event.target.value })}
+                  onChange={(event) =>
+                    updateMetadataDraft({ testing_notes: event.target.value })
+                  }
                   disabled={datasetLoading || Boolean(datasetError)}
                 />
               </Label>
             </div>
-            {metadataSaveError && <Alert tone="danger">{metadataSaveError}</Alert>}
+            {metadataSaveError && (
+              <Alert tone="danger">{metadataSaveError}</Alert>
+            )}
           </CollapsibleContent>
         </Collapsible>
       </Panel>
@@ -924,7 +1178,10 @@ export function DatasetPage({ theme }: Props) {
           onDragEnd={handleDragEnd}
           onDragCancel={handleDragCancel}
         >
-          <SortableContext items={graphs.map((graph) => graph.id)} strategy={rectSortingStrategy}>
+          <SortableContext
+            items={graphs.map((graph) => graph.id)}
+            strategy={rectSortingStrategy}
+          >
             <section className={graphGridClass}>
               {graphs.map((graph, index) => (
                 <SortableGraphCard
@@ -945,7 +1202,10 @@ export function DatasetPage({ theme }: Props) {
           <DragOverlay>
             {activeGraph ? (
               <article className="grid min-w-[300px] gap-2 rounded-lg border border-border bg-panel p-4 shadow-2xl">
-                <h3 className="text-base font-semibold">{activeGraph.name.trim() || `Graph ${graphs.findIndex((g) => g.id === activeGraph.id) + 1}`}</h3>
+                <h3 className="text-base font-semibold">
+                  {activeGraph.name.trim() ||
+                    `Graph ${graphs.findIndex((g) => g.id === activeGraph.id) + 1}`}
+                </h3>
                 <p className="text-sm text-muted">Dragging graph card...</p>
               </article>
             ) : null}

@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { ChartBuilder } from "../components/ChartBuilder";
+import { GpsMap } from "../components/GpsMap";
 import { PlotView } from "../components/PlotView";
 import {
   exportDataset,
@@ -1168,6 +1169,9 @@ export function DatasetPage({ theme }: Props) {
           </CollapsibleContent>
         </Collapsible>
       </Panel>
+      {!loading && !error && (
+        <GpsMap key={slug} slug={slug} columns={columns} graphs={graphs} />
+      )}
       {loading && <p className="text-sm text-muted">Loading schema...</p>}
       {error && <Alert tone="danger">Schema load failed: {error}</Alert>}
       {!loading && !error && (

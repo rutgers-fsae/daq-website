@@ -34,14 +34,15 @@ export function getSchema(slug: string) {
 }
 
 export function getChartData(slug: string, payload: ChartRequest) {
-  return apiFetch<{ data: unknown[]; row_count: number }>(
-    `/api/datasets/${slug}/chart-data`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    },
-  );
+  return apiFetch<{
+    data: unknown[];
+    row_count: number;
+    was_downsampled?: boolean;
+  }>(`/api/datasets/${slug}/chart-data`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function uploadDataset(file: File, password: string) {

@@ -16,6 +16,7 @@ Web app for selecting CSV files from `data/`, exploring columns, and plotting gr
 - Password-protected CSV uploads
 - Nano R4 airspeed logger (legacy and protocol v2) and VectorNav VN-300 CSVs, alongside MoTeC exports
 - Logger timestamps support date axes and time filters; blank readings remain gaps
+- VectorNav GPS track view with INS/GNSS selection, time slider, recorded-time playback, and graph time filters
 - Channel units are shown in the chart builder. VectorNav `pressure_pa` contains SDK values in kPa and is labeled accordingly; airspeed pressure is in Pa.
 
 ## Docker Compose (Dev)

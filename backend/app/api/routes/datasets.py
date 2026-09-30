@@ -63,11 +63,19 @@ def preview_dataset(slug: str, payload: PreviewRequest) -> dict:
     filters = [rule.model_dump() for rule in payload.filters]
     if not filters:
         records, row_count = read_dataset_preview(slug, limit)
-        return {"rows": records.to_dict(orient="records"), "row_count": row_count}
+        return {
+            "rows": records.astype(object)
+            .where(records.notna(), None)
+            .to_dict(orient="records"),
+            "row_count": row_count,
+        }
 
     df = read_dataset(slug)
     filtered = apply_filters(df, filters)
-    records = filtered.head(limit).to_dict(orient="records")
+    preview = filtered.head(limit)
+    records = (
+        preview.astype(object).where(preview.notna(), None).to_dict(orient="records")
+    )
     return {"rows": records, "row_count": len(filtered)}
 
 

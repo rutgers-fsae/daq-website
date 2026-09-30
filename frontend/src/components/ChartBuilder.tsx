@@ -45,7 +45,7 @@ const defaultConfig: ChartConfig = {
 function isTimeColumn(column: SchemaColumn) {
   return (
     (column.type === "numeric" || column.type === "datetime") &&
-    /(time|timestamp)/i.test(column.name)
+    /(time|timestamp|elapsed|_utc$|^startup_ns$)/i.test(column.name)
   );
 }
 

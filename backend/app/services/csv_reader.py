@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Iterable
 
 import pandas as pd
+import pyarrow.parquet as pq
 from pandas.errors import ParserError
 
 from app.config import settings
@@ -47,7 +48,7 @@ def read_dataset_sample_with_units(
         frame, units = _read_motec_csv(path, nrows=sample_rows)
     else:
         frame = _read_regular_csv(path, nrows=sample_rows)
-        units = _infer_units_from_column_names(frame.columns.tolist())
+        units = _units_for_path(path, frame.columns.tolist())
     return frame, units, _row_count_for_path(path)
 
 
@@ -77,7 +78,7 @@ def _read_dataset_cached(
         frame, units = _read_motec_csv(path, columns)
     else:
         frame = _read_regular_csv(path, columns)
-        units = _infer_units_from_column_names(frame.columns.tolist())
+        units = _units_for_path(path, frame.columns.tolist())
 
     if columns is None:
         ensure_parquet_sidecar(path, frame)
@@ -89,10 +90,12 @@ def _read_regular_csv(
 ) -> pd.DataFrame:
     kwargs = _read_csv_kwargs(columns, nrows)
     try:
-        return pd.read_csv(path, **kwargs)
+        return _normalize_logger_columns(pd.read_csv(path, **kwargs))
     except ParserError:
         try:
-            return pd.read_csv(path, engine="python", on_bad_lines="skip", **kwargs)
+            return _normalize_logger_columns(
+                pd.read_csv(path, engine="python", on_bad_lines="skip", **kwargs)
+            )
         except Exception as exc:
             raise bad_request(f"Unable to parse CSV: {exc}") from exc
 
@@ -162,7 +165,87 @@ def _units_for_path(path: Path, columns: list[str]) -> dict[str, str | None]:
     if _is_motec_csv(path):
         _, header_row, units_row = _find_motec_header(path)
         return _units_map_for_columns(columns, header_row, units_row)
-    return _infer_units_from_column_names(columns)
+    units = _infer_units_from_column_names(columns)
+    header = set(pd.read_csv(path, nrows=0).columns)
+    logger_units = {}
+    if {"received_utc", "airspeed_m_s"} <= header:
+        logger_units = {
+            "elapsed_s": "s",
+            "device_elapsed_s": "s",
+            "device_micros": "µs",
+            "pressure_pa": "Pa",
+            "zero_offset_pa": "Pa",
+            "corrected_pressure_pa": "Pa",
+            "zero_noise_band_pa": "Pa",
+            "density_kg_m3": "kg/m³",
+            "airspeed_m_s": "m/s",
+            "airspeed_km_h": "km/h",
+            "requested_rate_hz": "Hz",
+        }
+    elif {"timestamp", "startup_ns", "yaw"} <= header:
+        logger_units = {
+            "startup_ns": "ns",
+            "gps_utc_ns": "ns",
+            "dt": "s",
+            "yaw": "deg",
+            "pitch": "deg",
+            "roll": "deg",
+            "ax": "m/s²",
+            "ay": "m/s²",
+            "az": "m/s²",
+            "gx": "rad/s",
+            "gy": "rad/s",
+            "gz": "rad/s",
+            "dvx": "m/s",
+            "dvy": "m/s",
+            "dvz": "m/s",
+            "dtx": "deg",
+            "dty": "deg",
+            "dtz": "deg",
+            "mx": "G",
+            "my": "G",
+            "mz": "G",
+            "temp_c": "°C",
+            # The logger writes the SDK's kPa value despite this column name.
+            "pressure_pa": "kPa",
+        }
+        for prefix in ("gnss", "ins"):
+            logger_units.update({f"{prefix}_{axis}": "deg" for axis in ("lat", "lon")})
+            logger_units.update(
+                {
+                    f"{prefix}_{axis}": "m/s"
+                    for axis in ("vn", "ve", "vd", "speed", "vel_u")
+                }
+            )
+            logger_units.update(
+                {
+                    f"{prefix}_{axis}": "m"
+                    for axis in ("alt", "pos_u", "pos_u_n", "pos_u_e", "pos_u_d")
+                }
+            )
+    return {column: logger_units.get(column, unit) for column, unit in units.items()}
+
+
+def _normalize_logger_columns(frame: pd.DataFrame) -> pd.DataFrame:
+    for column in ("received_utc", "sample_utc", "timestamp", "event_timestamp"):
+        if column in frame and (
+            not pd.api.types.is_numeric_dtype(frame[column])
+            or frame[column].isna().all()
+        ):
+            frame[column] = pd.to_datetime(
+                frame[column], format="mixed", utc=True, errors="coerce"
+            )
+    for column in (
+        "reading_state",
+        "calibration_id",
+        "source_line",
+        "run_title",
+        "event_type",
+        "event_note",
+    ):
+        if column in frame:
+            frame[column] = frame[column].astype("string")
+    return frame
 
 
 def _parquet_sidecar_path(path: Path) -> Path:
@@ -177,7 +260,9 @@ def _read_parquet_sidecar(
         return None
 
     try:
-        return pd.read_parquet(sidecar, columns=list(columns) if columns else None)
+        return _normalize_logger_columns(
+            pd.read_parquet(sidecar, columns=list(columns) if columns else None)
+        )
     except (ImportError, ValueError, FileNotFoundError, OSError):
         return None
 
@@ -206,7 +291,7 @@ def _row_count_for_path(path: Path) -> int:
     sidecar = _parquet_sidecar_path(path)
     if sidecar.exists() and sidecar.stat().st_mtime_ns >= path.stat().st_mtime_ns:
         try:
-            return int(pd.read_parquet(sidecar, columns=[]).shape[0])
+            return pq.read_metadata(sidecar).num_rows
         except (ImportError, ValueError, FileNotFoundError, OSError):
             pass
 
@@ -256,6 +341,17 @@ def apply_filters(df: pd.DataFrame, filters: list[dict]) -> pd.DataFrame:
         value = rule.get("value")
         if col not in result.columns:
             continue
+        if pd.api.types.is_datetime64_any_dtype(result[col]) and op in (
+            "eq",
+            "gte",
+            "lte",
+        ):
+            if not isinstance(value, str):
+                raise bad_request(f"Invalid datetime filter for {col}")
+            try:
+                value = pd.to_datetime(value, utc=True)
+            except (ValueError, TypeError) as exc:
+                raise bad_request(f"Invalid datetime filter for {col}") from exc
         if op == "eq":
             result = result[result[col] == value]
         elif op == "contains":

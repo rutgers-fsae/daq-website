@@ -28,6 +28,7 @@ def build_chart_payload(
         )
         df = df.iloc[np.unique(indices)].reset_index(drop=True)
 
+    df = df.astype(object).where(df.notna(), None)
     data = []
     trace_options = _plotly_trace_options(chart_type)
     if group_by and group_by in df.columns:

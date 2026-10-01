@@ -10,6 +10,10 @@ const DatasetPage = lazy(() =>
   import("./pages/DatasetPage").then((mod) => ({ default: mod.DatasetPage })),
 );
 
+const CascadiaPage = lazy(() =>
+  import("./pages/CascadiaPage").then((mod) => ({ default: mod.CascadiaPage })),
+);
+
 type Theme = "light" | "dark";
 type ThemePreference = Theme | "system";
 
@@ -98,6 +102,12 @@ export default function App() {
           </span>
         </Link>
         <div className="flex items-center gap-2">
+          <Link
+            to="/cascadia"
+            className="text-sm font-medium hover:text-button"
+          >
+            Cascadia EEPROM
+          </Link>
           <Badge tone="info" className="hidden sm:inline-flex">
             Telemetry
           </Badge>
@@ -121,6 +131,7 @@ export default function App() {
       >
         <Routes>
           <Route path="/" element={<DatasetListPage />} />
+          <Route path="/cascadia" element={<CascadiaPage />} />
           <Route
             path="/datasets/:slug"
             element={<DatasetPage theme={theme} />}

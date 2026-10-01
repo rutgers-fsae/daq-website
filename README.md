@@ -19,6 +19,38 @@ Web app for selecting CSV files from `data/`, exploring columns, and plotting gr
 - VectorNav GPS track view with INS/GNSS selection, time slider, recorded-time playback, and graph time filters
 - Channel units are shown in the chart builder. VectorNav `pressure_pa` contains SDK values in kPa and is labeled accordingly; airspeed pressure is in Pa.
 
+## Cascadia EEPROM via USB
+
+Open **Cascadia EEPROM** in the header (`/cascadia`) using Chrome or Edge on
+HTTPS or localhost. USB access uses the browser's Web Serial API and connects
+to the computer viewing the website, without a backend serial service.
+**Check USB ports** lists connected ports already authorized for this site;
+**Choose USB port & connect** opens the browser chooser for a new device.
+Close the firmware TUI and other applications using the CANdapter first.
+
+Defaults match `../firmware/cascadia-can`: serial 115200 baud, CAN 500 kbit/s,
+standard identifiers, base `0xA0`. Connection settings include extended/J1939
+mode, reply timeout, telemetry freshness, and request gap. Connecting does not
+read or write EEPROM automatically. Read a row or explicitly read all 85
+parameters, search by name/address, then edit a successfully read value in
+engineering units or as a raw decimal/hex word. The catalog is copied from the
+firmware's CAN Protocol 6.3 catalog; reserved/factory/command addresses are excluded.
+
+Review one value, type `WRITE`, and apply. Every write checks its live baseline,
+related temperature/CAN settings, and fresh inverter-disabled Internal States
+telemetry, then requires acknowledgment and independent readback. Writes are
+never retried. Missing/stale/enabled telemetry blocks writes. Errors may leave
+EEPROM changed but unverified; reconnect and reread before proceeding. Motor
+parameter changes clear other observed values because flux/gamma can reset.
+Communication changes can interrupt verification. Power-cycle requirements
+are shown per row; the website does not perform power cycles or motor commands.
+Only one CAN node should issue parameter requests during a session.
+
+Offline protocol checks: `npm --prefix frontend test -- src/cascadia/candapter.test.ts`.
+Hardware acceptance still requires an attached CANdapter/inverter: read a known
+parameter, write an operator-selected value while disabled, verify readback,
+and check persistence after an operator-performed power cycle.
+
 ## Docker Compose (Dev)
 
 1. Copy env file:

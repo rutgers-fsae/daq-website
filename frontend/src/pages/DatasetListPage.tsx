@@ -1,9 +1,10 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Database, Download, FileSpreadsheet } from "lucide-react";
+import { Database, Download, FileSpreadsheet, Search } from "lucide-react";
 import { UploadPanel } from "../components/UploadPanel";
 import { useDatasets } from "../hooks/useDatasets";
 import { datasetDownloadUrl } from "../api/datasets";
-import { Alert, Badge, Panel, Tooltip } from "../components/ui";
+import { Alert, Badge, FieldInput, Panel, Tooltip } from "../components/ui";
 
 function formatBytes(size: number) {
   if (!Number.isFinite(size) || size <= 0) return "0 B";
@@ -18,6 +19,20 @@ function formatBytes(size: number) {
 export function DatasetListPage() {
   const { datasets, loading, error, refresh } = useDatasets();
   const navigate = useNavigate();
+  const [search, setSearch] = useState("");
+  const terms = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const filteredDatasets = datasets.filter((dataset) => {
+    const text = [
+      dataset.title,
+      dataset.filename,
+      dataset.metadata.driver,
+      dataset.metadata.aero_configuration,
+      dataset.metadata.testing_notes,
+    ]
+      .join(" ")
+      .toLowerCase();
+    return terms.every((term) => text.includes(term));
+  });
 
   return (
     <main className="grid gap-4 lg:grid-cols-[minmax(320px,420px)_1fr]">
@@ -41,13 +56,41 @@ export function DatasetListPage() {
           <Badge tone="default">{datasets.length} available</Badge>
         </div>
         <div className="grid gap-3 px-4 pb-4">
+          <div className="relative">
+            <Search
+              size={16}
+              aria-hidden="true"
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted"
+            />
+            <FieldInput
+              type="search"
+              aria-label="Search datasets"
+              placeholder="Search names, files, drivers, notes..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              className="w-full pl-9"
+            />
+          </div>
+          {!loading && !error && datasets.length > 0 && terms.length > 0 && (
+            <p role="status" className="text-xs text-muted">
+              {filteredDatasets.length} of {datasets.length} datasets
+            </p>
+          )}
           {loading && <p className="text-sm text-muted">Loading datasets...</p>}
           {error && <Alert tone="danger">{error}</Alert>}
           {!loading && !error && datasets.length === 0 && (
             <p className="text-sm text-muted">No datasets uploaded yet.</p>
           )}
+          {!loading &&
+            !error &&
+            datasets.length > 0 &&
+            filteredDatasets.length === 0 && (
+              <p className="text-sm text-muted">
+                No datasets match your search.
+              </p>
+            )}
           <ul className="grid gap-2">
-            {datasets.map((dataset) => (
+            {filteredDatasets.map((dataset) => (
               <li key={dataset.slug}>
                 <article className="group grid gap-2 rounded-lg border border-border bg-surface px-3 py-3 text-sm shadow-sm transition hover:-translate-y-0.5 hover:border-button hover:shadow-md">
                   <div className="flex items-start justify-between gap-3">

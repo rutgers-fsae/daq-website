@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { act } from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { PlotView } from "./PlotView";
@@ -53,6 +54,11 @@ describe("PlotView", () => {
     await screen.findByTestId("plot");
 
     expect(plotState.lastProps?.layout).not.toHaveProperty("yaxis2");
+    expect(plotState.lastProps?.layout).toMatchObject({
+      hovermode: "x unified",
+      hoverdistance: -1,
+      hoverlabel: { namelength: -1 },
+    });
     expect(plotState.lastProps?.data[0]).toMatchObject({
       name: "Speed (mph)",
       yaxis: "y",
@@ -77,6 +83,11 @@ describe("PlotView", () => {
     await screen.findByTestId("plot");
 
     expect(plotState.lastProps?.layout).toHaveProperty("yaxis2");
+    expect(plotState.lastProps?.layout).toMatchObject({
+      hovermode: "x unified",
+      hoverdistance: -1,
+      hoverlabel: { namelength: -1 },
+    });
     expect(plotState.lastProps?.data).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ name: "Speed (mph)", yaxis: "y" }),
@@ -178,6 +189,27 @@ describe("PlotView", () => {
           /Chart render failed: Cannot read properties of undefined/i,
         ),
       ).toBeInTheDocument();
+    });
+  });
+  it("toggles between shared and nearest-point hover without changing data", async () => {
+    const user = userEvent.setup();
+    render(<PlotView data={[baseTrace]} theme="light" axisTitles={null} />);
+    await screen.findByTestId("plot");
+    const toggle = screen.getByRole("button", { name: "Shared hover" });
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    const data = plotState.lastProps?.data;
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    expect(plotState.lastProps?.layout).toMatchObject({
+      hovermode: "closest",
+      hoverdistance: 20,
+    });
+    expect(plotState.lastProps?.data).toBe(data);
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    expect(plotState.lastProps?.layout).toMatchObject({
+      hovermode: "x unified",
+      hoverdistance: -1,
     });
   });
 });

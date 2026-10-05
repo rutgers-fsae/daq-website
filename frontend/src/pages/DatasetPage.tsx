@@ -73,6 +73,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../components/ui/dialog";
+import { cleanDisplayUnits, convertChartData } from "../lib/units";
 import { cxClasses } from "../components/ui-utils";
 
 type Props = {
@@ -208,6 +209,7 @@ function restoreChartConfig(
         : "line",
     x_column:
       typeof config?.x_column === "string" ? config.x_column : undefined,
+    display_units: cleanDisplayUnits(config?.display_units),
     y_columns: Array.isArray(config?.y_columns)
       ? config.y_columns.filter(
           (item): item is string => typeof item === "string",
@@ -229,6 +231,11 @@ function restoreChartConfig(
 
 function chartConfigsEqual(left: ChartConfig, right: ChartConfig): boolean {
   return (
+    Object.keys(left.display_units || {}).length ===
+      Object.keys(right.display_units || {}).length &&
+    Object.entries(left.display_units || {}).every(
+      ([column, unit]) => right.display_units?.[column] === unit,
+    ) &&
     left.chart_type === right.chart_type &&
     left.x_column === right.x_column &&
     left.y_columns.length === right.y_columns.length &&
@@ -587,6 +594,7 @@ type SortableGraphCardProps = {
       traceLabels: Record<string, string>;
       traceAxisByColumn: Record<string, "y" | "y2">;
     },
+    displayUnits: Record<string, string>,
   ) => void;
 };
 
@@ -674,7 +682,9 @@ function SortableGraphCard({
         columns={columns}
         config={graph.chartConfig}
         onConfigChange={handleConfigChange}
-        onRun={(payload, titles) => onRun(graph.id, payload, titles)}
+        onRun={(payload, titles, displayUnits) =>
+          onRun(graph.id, payload, titles, displayUnits)
+        }
       />
       {graph.isLoading && (
         <p className="text-sm text-muted">Rendering graph...</p>
@@ -929,6 +939,7 @@ export function DatasetPage({ theme }: Props) {
       traceLabels: Record<string, string>;
       traceAxisByColumn: Record<string, "y" | "y2">;
     },
+    displayUnits: Record<string, string>,
   ) {
     setGraphs((prev) =>
       prev.map((graph) =>
@@ -939,12 +950,18 @@ export function DatasetPage({ theme }: Props) {
     );
     try {
       const result = await getChartData(slug, payload);
+      const plotData = convertChartData(
+        result.data as PlotTrace[],
+        payload,
+        columns,
+        displayUnits,
+      );
       setGraphs((prev) =>
         prev.map((graph) =>
           graph.id === graphId
             ? {
                 ...graph,
-                plotData: result.data as PlotTrace[],
+                plotData,
                 axisTitles: titles,
                 chartError: null,
                 isLoading: false,

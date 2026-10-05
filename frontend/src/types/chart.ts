@@ -17,6 +17,6 @@ export type ChartRequest = {
 export type ChartConfig = Pick<
   ChartRequest,
   "chart_type" | "x_column" | "y_columns" | "filters"
->;
+> & { display_units?: Record<string, string> };
 
 export type PlotTrace = Record<string, unknown>;

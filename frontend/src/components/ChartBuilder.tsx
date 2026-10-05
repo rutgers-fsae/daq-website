@@ -18,6 +18,7 @@ import {
   CommandItem,
   CommandList,
 } from "./ui/command";
+import { cleanDisplayUnits, compatibleUnits, sourceUnit } from "../lib/units";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 
 type Props = {
@@ -33,6 +34,7 @@ type Props = {
       traceLabels: Record<string, string>;
       traceAxisByColumn: Record<string, "y" | "y2">;
     },
+    displayUnits: Record<string, string>,
   ) => void;
 };
 
@@ -78,6 +80,13 @@ export function ChartBuilder({
     config.chart_type,
   );
   const [xColumn, setXColumn] = useState(config.x_column || "");
+  const [unitSelections, setUnitSelections] = useState(() =>
+    cleanDisplayUnits(config.display_units),
+  );
+  const displayUnits = useMemo(
+    () => cleanDisplayUnits(unitSelections, columns),
+    [unitSelections, columns],
+  );
   const [yColumns, setYColumns] = useState<string[]>(config.y_columns);
   const initialTimeFilter = timeFilterState(config.filters);
   const [timeColumn, setTimeColumn] = useState(initialTimeFilter.timeColumn);
@@ -135,12 +144,14 @@ export function ChartBuilder({
       chart_type: chartType,
       x_column: xColumn || undefined,
       y_columns: yColumns,
+      display_units: displayUnits,
       filters,
     });
-  }, [chartType, filters, onConfigChange, xColumn, yColumns]);
+  }, [chartType, filters, onConfigChange, xColumn, yColumns, displayUnits]);
 
   useEffect(() => {
     const available = new Set(columns.map((column) => column.name));
+    setUnitSelections((current) => cleanDisplayUnits(current, columns));
     setXColumn((current) =>
       current && !available.has(current) ? "" : current,
     );
@@ -156,11 +167,28 @@ export function ChartBuilder({
   function columnLabel(columnName: string) {
     const column = columns.find((item) => item.name === columnName);
     if (!column) return columnName;
-    return column.display_name || column.name;
+    const target = Object.prototype.hasOwnProperty.call(
+      displayUnits,
+      columnName,
+    )
+      ? displayUnits[columnName]
+      : undefined;
+    if (!target) return column.display_name || column.name;
+    const label = column.display_name || column.name;
+    const suffix = ` (${column.unit})`;
+    return `${label.endsWith(suffix) ? label.slice(0, -suffix.length) : label} (${target})`;
   }
 
   function columnUnit(columnName: string) {
-    return columns.find((item) => item.name === columnName)?.unit || null;
+    const column = columns.find((item) => item.name === columnName);
+    return (
+      (Object.prototype.hasOwnProperty.call(displayUnits, columnName)
+        ? displayUnits[columnName]
+        : undefined) ||
+      sourceUnit(column) ||
+      column?.unit ||
+      null
+    );
   }
 
   function toggleYColumn(columnName: string) {
@@ -373,6 +401,42 @@ export function ChartBuilder({
           ))}
         </div>
       )}
+      <div className="grid gap-2 md:grid-cols-2">
+        {Array.from(new Set([xColumn, ...yColumns])).map((name) => {
+          const column = columns.find((item) => item.name === name);
+          const source = sourceUnit(column);
+          const targets = compatibleUnits(source);
+          if (!source || !targets.length) return null;
+          return (
+            <Label key={name} className="grid gap-1">
+              {name} display unit (source: {column?.unit})
+              <FieldSelect
+                aria-label={`${name} display unit`}
+                value={
+                  Object.prototype.hasOwnProperty.call(displayUnits, name)
+                    ? displayUnits[name]
+                    : source
+                }
+                onChange={(event) =>
+                  setUnitSelections((current) => ({
+                    ...current,
+                    [name]: event.target.value,
+                  }))
+                }
+              >
+                {targets.map((target) => (
+                  <option key={target} value={target}>
+                    {target}
+                    {target === source ? " (original)" : ""}
+                    {target === "hp" ? " (mechanical)" : ""}
+                    {target === "g" ? " (standard gravity)" : ""}
+                  </option>
+                ))}
+              </FieldSelect>
+            </Label>
+          );
+        })}
+      </div>
       {timeColumns.length > 0 && (
         <div className="grid gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 shadow-sm">
           <div className="flex items-center justify-between gap-2">
@@ -398,6 +462,7 @@ export function ChartBuilder({
             </Label>
             <Label className="grid min-w-0 gap-1">
               Start
+              {selectedTimeColumn?.unit ? ` (${selectedTimeColumn.unit})` : ""}
               <FieldInput
                 type={timeInputType}
                 value={startTime}
@@ -410,6 +475,7 @@ export function ChartBuilder({
             </Label>
             <Label className="grid min-w-0 gap-1">
               End
+              {selectedTimeColumn?.unit ? ` (${selectedTimeColumn.unit})` : ""}
               <FieldInput
                 type={timeInputType}
                 value={endTime}
@@ -478,6 +544,7 @@ export function ChartBuilder({
               ),
               traceAxisByColumn: traceAxisByColumn(),
             },
+            displayUnits,
           )
         }
         variant="primary"

@@ -54,6 +54,7 @@ describe("ChartBuilder", () => {
         xTitle: "Time (s)",
         yTitle: "Speed (mph)",
       }),
+      {},
     );
   });
 
@@ -103,6 +104,7 @@ describe("ChartBuilder", () => {
           xTitle: "Driver",
           yTitle: "Speed (mph)",
         }),
+        {},
       );
     },
   );
@@ -144,5 +146,119 @@ describe("ChartBuilder", () => {
       yOptions.getByRole("option", { name: /speed/i }),
     ).toBeInTheDocument();
     expect(yOptions.queryByText("Time (s)")).not.toBeInTheDocument();
+  });
+  it("uses saved display units for shared axes and snapshots them on Render", async () => {
+    const user = userEvent.setup();
+    const onRun = vi.fn();
+    const onConfigChange = vi.fn();
+    render(
+      <ChartBuilder
+        columns={[
+          ...columns,
+          { ...columns[1], name: "OtherSpeed", unit: "kph" },
+        ]}
+        config={{
+          chart_type: "line",
+          x_column: "Time",
+          y_columns: ["Speed", "OtherSpeed"],
+          filters: [],
+          display_units: { OtherSpeed: "mph", Missing: "psi", Speed: "psi" },
+        }}
+        onConfigChange={onConfigChange}
+        onRun={onRun}
+      />,
+    );
+    expect(screen.getByLabelText("OtherSpeed display unit")).toHaveValue("mph");
+    expect(screen.getByLabelText("Speed display unit")).toHaveValue("mph");
+    expect(screen.queryByText(/Using dual Y-axes/)).not.toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Time display unit"), "min");
+    await user.type(screen.getByLabelText("Time filter start"), "60");
+    await user.click(screen.getByRole("button", { name: "Render" }));
+    expect(onRun).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        filters: [{ column: "Time", op: "gte", value: 60 }],
+      }),
+      expect.objectContaining({
+        xTitle: "Time (min)",
+        yTitle: "Values (mph)",
+        y2Title: undefined,
+        traceAxisByColumn: { Speed: "y", OtherSpeed: "y" },
+      }),
+      { Time: "min", OtherSpeed: "mph" },
+    );
+    expect(onConfigChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        display_units: { Time: "min", OtherSpeed: "mph" },
+      }),
+    );
+    await user.selectOptions(
+      screen.getByLabelText("Speed display unit"),
+      "m/s",
+    );
+    expect(onRun).toHaveBeenCalledTimes(1);
+    expect(screen.getByText(/Using dual Y-axes/)).toBeInTheDocument();
+  });
+
+  it("keeps the two-axis limit and omits unknown and datetime conversion controls", async () => {
+    const user = userEvent.setup();
+    render(
+      <ChartBuilder
+        columns={[
+          ...columns,
+          {
+            ...columns[1],
+            name: "Pressure",
+            unit: "kPa",
+            display_name: "Pressure (kPa)",
+          },
+          {
+            ...columns[1],
+            name: "Unknown",
+            unit: "G",
+            display_name: "Unknown (G)",
+          },
+          { ...columns[0], name: "timestamp", type: "datetime" },
+        ]}
+        config={{
+          chart_type: "line",
+          x_column: "timestamp",
+          y_columns: ["Speed", "Pressure", "Unknown"],
+          filters: [],
+        }}
+        onRun={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Render" })).toBeDisabled();
+    expect(
+      screen.queryByLabelText("Unknown display unit"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("timestamp display unit"),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Unknown (G)" }));
+    expect(screen.getByRole("button", { name: "Render" })).toBeEnabled();
+  });
+  it("discards unit selections when the source schema changes", () => {
+    const config = {
+      chart_type: "line" as const,
+      y_columns: ["Speed"],
+      filters: [],
+      display_units: { Speed: "km/h" },
+    };
+    const onRun = vi.fn();
+    const { rerender } = render(
+      <ChartBuilder columns={columns} config={config} onRun={onRun} />,
+    );
+    expect(screen.getByLabelText("Speed display unit")).toHaveValue("km/h");
+    rerender(
+      <ChartBuilder
+        columns={[columns[0], { ...columns[1], unit: "kPa" }]}
+        config={config}
+        onRun={onRun}
+      />,
+    );
+    expect(screen.getByLabelText("Speed display unit")).toHaveValue("kPa");
+    rerender(<ChartBuilder columns={columns} config={config} onRun={onRun} />);
+    expect(screen.getByLabelText("Speed display unit")).toHaveValue("mph");
   });
 });

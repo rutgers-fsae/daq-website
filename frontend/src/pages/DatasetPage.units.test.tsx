@@ -200,4 +200,84 @@ describe("dataset chart display units", () => {
       );
     },
   );
+  it("converts both brake-pressure lines when either selector changes", async () => {
+    const names = ["Brake Pressure Front", "Brake Pressure Rear"];
+    const columns = names.map((name) => ({
+      name,
+      type: "numeric",
+      unit: "kPa",
+      display_name: `${name} (kPa)`,
+      sample_values: [],
+    }));
+    vi.mocked(useDatasetSchema).mockReturnValue({
+      columns,
+      loading: false,
+      error: null,
+    });
+    storage.set(
+      "daq-graphs-sample",
+      JSON.stringify([
+        {
+          id: 1,
+          name: "Graph 1",
+          chartConfig: {
+            chart_type: "line",
+            y_columns: names,
+            filters: [],
+          },
+        },
+      ]),
+    );
+    vi.mocked(getChartData).mockResolvedValue({
+      row_count: 2,
+      data: names.map((name) => ({
+        name,
+        x: [0, 1],
+        y: [100, 200],
+        type: "scatter",
+        mode: "lines",
+      })),
+    });
+    const user = userEvent.setup();
+    page();
+    await user.selectOptions(
+      screen.getByLabelText("Brake Pressure Front display unit"),
+      "psi",
+    );
+    expect(
+      screen.getByLabelText("Brake Pressure Rear display unit"),
+    ).toHaveValue("psi");
+    await user.click(screen.getByRole("button", { name: "Render" }));
+    await waitFor(() => expect(plot.data).toHaveLength(2));
+    for (const [index, name] of names.entries()) {
+      expect(plot.data[index]).toMatchObject({
+        name: `${name} (psi)`,
+        yaxis: "y",
+        y: [expect.closeTo(14.503773773), expect.closeTo(29.007547546)],
+      });
+    }
+    expect(plot.layout).not.toHaveProperty("yaxis2");
+    expect(plot.layout.yaxis).toMatchObject({
+      title: { text: "Values (psi)" },
+    });
+    expect(
+      JSON.parse(storage.get("daq-graphs-sample")!)[0].chartConfig
+        .display_units,
+    ).toEqual(Object.fromEntries(names.map((name) => [name, "psi"])));
+    await user.selectOptions(
+      screen.getByLabelText("Brake Pressure Rear display unit"),
+      "kPa",
+    );
+    expect(
+      screen.getByLabelText("Brake Pressure Front display unit"),
+    ).toHaveValue("kPa");
+    await user.click(screen.getByRole("button", { name: "Render" }));
+    await waitFor(() =>
+      expect(plot.data[0].name).toBe("Brake Pressure Front (kPa)"),
+    );
+    expect(plot.data.map((trace) => trace.y)).toEqual([
+      [100, 200],
+      [100, 200],
+    ]);
+  });
 });

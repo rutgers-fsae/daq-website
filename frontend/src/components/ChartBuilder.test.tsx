@@ -196,7 +196,8 @@ describe("ChartBuilder", () => {
       "m/s",
     );
     expect(onRun).toHaveBeenCalledTimes(1);
-    expect(screen.getByText(/Using dual Y-axes/)).toBeInTheDocument();
+    expect(screen.queryByText(/Using dual Y-axes/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText("OtherSpeed display unit")).toHaveValue("m/s");
   });
 
   it("keeps the two-axis limit and omits unknown and datetime conversion controls", async () => {

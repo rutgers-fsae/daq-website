@@ -199,6 +199,20 @@ export function ChartBuilder({
     );
   }
 
+  function changeDisplayUnit(columnName: string, target: string) {
+    const affected = yColumns.includes(columnName)
+      ? yColumns.filter((name) =>
+          compatibleUnits(
+            sourceUnit(columns.find((column) => column.name === name)),
+          ).includes(target),
+        )
+      : [columnName];
+    setUnitSelections((current) => ({
+      ...current,
+      ...Object.fromEntries(affected.map((name) => [name, target])),
+    }));
+  }
+
   const selectedUnits = Array.from(
     new Set(yColumns.map((column) => columnUnit(column) || "unitless")),
   );
@@ -402,6 +416,12 @@ export function ChartBuilder({
         </div>
       )}
       <div className="grid gap-2 md:grid-cols-2">
+        {yColumns.length > 1 && (
+          <p className="text-xs text-muted md:col-span-2">
+            Changing a Y-series unit also updates selected series with
+            compatible units.
+          </p>
+        )}
         {Array.from(new Set([xColumn, ...yColumns])).map((name) => {
           const column = columns.find((item) => item.name === name);
           const source = sourceUnit(column);
@@ -418,10 +438,7 @@ export function ChartBuilder({
                     : source
                 }
                 onChange={(event) =>
-                  setUnitSelections((current) => ({
-                    ...current,
-                    [name]: event.target.value,
-                  }))
+                  changeDisplayUnit(name, event.target.value)
                 }
               >
                 {targets.map((target) => (

@@ -301,10 +301,10 @@ export function ChartBuilder({
   const xDropdownLabel = xColumn ? columnLabel(xColumn) : "Select X Axis";
 
   return (
-    <Panel className="grid gap-3 bg-surface-soft p-3 shadow-none">
+    <Panel className="theme-light grid gap-4 !rounded-card border-2 !border-accent-line p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-muted">
+          <h3 className="font-display text-2xl font-bold leading-tight">
             Chart Builder
           </h3>
           <p className="text-xs text-subtle">

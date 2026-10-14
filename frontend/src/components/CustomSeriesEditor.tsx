@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { Pencil, X } from "lucide-react";
-import { Button, FieldInput, Label } from "./ui";
+import { Button, Eyebrow, FieldInput, Label } from "./ui";
 import type { ComputedColumn } from "../types/chart";
 import type { SchemaColumn } from "../types/dataset";
 
@@ -146,10 +146,8 @@ export function CustomSeriesEditor({
   const fieldClass = "w-full min-w-0";
 
   return (
-    <div className="grid gap-2 rounded-md border border-border bg-surface px-3 py-2 shadow-sm">
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
-        Custom Series
-      </p>
+    <div className="grid gap-3 border-t-2 border-accent-line pt-4">
+      <Eyebrow className="text-text">Custom Series</Eyebrow>
       <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,6rem)] gap-2">
         <Label className="grid min-w-0 gap-1">
           Name
@@ -206,7 +204,7 @@ export function CustomSeriesEditor({
             <ul
               role="listbox"
               aria-label="Matching channels"
-              className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-auto rounded-md border border-border bg-panel p-1 text-sm font-normal normal-case tracking-normal text-text shadow-lg"
+              className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-auto rounded-md border border-border bg-panel p-1 text-sm font-normal normal-case tracking-normal text-text"
             >
               {suggestions.map((column, index) => (
                 <li
@@ -217,7 +215,7 @@ export function CustomSeriesEditor({
                     event.preventDefault();
                     accept(column);
                   }}
-                  className={`cursor-pointer truncate rounded px-2 py-1 ${index === selected ? "bg-surface-soft" : ""}`}
+                  className={`cursor-pointer truncate rounded px-2 py-1 ${index === selected ? "bg-text text-surface" : ""}`}
                 >
                   {column.name}
                   {column.unit ? (

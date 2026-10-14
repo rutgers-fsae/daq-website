@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useState } from "react";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { Link, Route, Routes } from "react-router-dom";
 import { DatasetListPage } from "./pages/DatasetListPage";
-import { Badge, Button, Panel, Tooltip } from "./components/ui";
+import { Badge, Button, Eyebrow, Panel, Tooltip } from "./components/ui";
 import rfrDarkLogo from "./assets/rfr-dark-logo.png";
 import rfrLightLogo from "./assets/rfr-light-logo.png";
 
@@ -82,7 +82,7 @@ export default function App() {
 
   return (
     <div className="mx-auto min-h-screen w-full max-w-[1540px] px-3 py-3 text-text sm:px-4 lg:px-6">
-      <header className="mb-4 flex min-h-16 items-center justify-between gap-4 rounded-lg border border-[var(--header-border)] bg-[var(--header-bg)] px-3 py-2 shadow-sm shadow-black/5 backdrop-blur sm:px-4">
+      <header className="mb-6 flex min-h-16 flex-wrap items-center justify-between gap-4 border-b-2 border-[var(--header-border)] bg-[var(--header-bg)] py-3">
         <Link
           to="/"
           className="flex min-w-0 items-center gap-3 font-semibold tracking-tight"
@@ -92,10 +92,8 @@ export default function App() {
             alt="Rutgers Formula Racing"
             className="h-10 w-auto max-w-[190px] object-contain sm:h-12 sm:max-w-[260px]"
           />
-          <span className="hidden min-w-0 border-l border-[var(--header-border)] pl-3 sm:block">
-            <span className="block truncate text-xs font-bold uppercase tracking-[0.18em] text-subtle">
-              Data Acquisition
-            </span>
+          <span className="hidden min-w-0 border-l border-border pl-3 sm:block">
+            <Eyebrow className="block truncate">Data Acquisition</Eyebrow>
             <span className="block truncate text-base font-semibold">
               CSV Grapher
             </span>
@@ -104,7 +102,7 @@ export default function App() {
         <div className="flex items-center gap-2">
           <Link
             to="/cascadia"
-            className="text-sm font-medium hover:text-button"
+            className="inline-flex min-h-11 items-center border border-input-border px-4 text-sm font-semibold hover:border-accent-line"
           >
             Cascadia EEPROM
           </Link>

@@ -12,11 +12,11 @@ import {
 
 const THEME_COLORS = {
   dark: {
-    paper: "#0d0d0f",
-    plot: "#09090b",
+    paper: "#000000",
+    plot: "#000000",
     text: "#f7f7f7",
-    grid: "#2a2a2f",
-    zero: "#4a4a52",
+    grid: "#2a2a2a",
+    zero: "#4a4a4a",
   },
   light: {
     paper: "#ffffff",
@@ -29,13 +29,13 @@ const THEME_COLORS = {
 
 const COLORWAYS = {
   dark: [
-    "#ff3b5f",
-    "#38bdf8",
-    "#a78bfa",
-    "#fbbf24",
-    "#34d399",
-    "#fb7185",
-    "#60a5fa",
+    "#ffffff",
+    "#0097a7",
+    "#fd0127",
+    "#9e9e9e",
+    "#5fd0dc",
+    "#ff6b81",
+    "#d6d6d6",
   ],
   light: [
     "#fd0127",

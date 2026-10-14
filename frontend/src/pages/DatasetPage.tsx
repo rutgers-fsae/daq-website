@@ -652,7 +652,7 @@ function SortableGraphCard({
       ref={setNodeRef}
       style={style}
       className={cxClasses(
-        "grid gap-3 rounded-lg border border-border bg-panel p-3 shadow-sm shadow-black/5 transition",
+        "grid gap-4 rounded-lg border-2 !border-accent-line bg-panel p-4 transition",
         isDragging && "opacity-85 shadow-2xl",
       )}
     >
@@ -710,7 +710,7 @@ function SortableGraphCard({
       {graph.chartError && (
         <Alert tone="danger">Chart load failed: {graph.chartError}</Alert>
       )}
-      <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-inner">
+      <div className="overflow-hidden border border-border bg-surface">
         <PlotView
           data={graph.plotData}
           theme={theme}
@@ -1051,7 +1051,9 @@ export function DatasetPage({ theme }: Props) {
             Back to datasets
           </Link>
           <div className="mt-1 flex flex-wrap items-center gap-2">
-            <h2 className="truncate text-lg font-semibold">Dataset: {slug}</h2>
+            <h2 className="truncate font-display text-xl font-bold">
+              Dataset: {slug}
+            </h2>
             {!loading && !error && (
               <Badge tone="info">{columns.length} channels</Badge>
             )}

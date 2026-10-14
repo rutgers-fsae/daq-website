@@ -16,22 +16,37 @@ type Tone = "default" | "danger" | "warning" | "info" | "success";
 export function Panel({ className, ...props }: HTMLAttributes<HTMLElement>) {
   return (
     <section
+      className={cn("rounded-lg border border-border bg-panel", className)}
+      {...props}
+    />
+  );
+}
+
+// Running header in the RFR livery: "// TITLE //" in Orbitron.
+export function Eyebrow({
+  className,
+  children,
+  ...props
+}: HTMLAttributes<HTMLSpanElement>) {
+  return (
+    <span
       className={cn(
-        "rounded-lg border border-border bg-panel shadow-sm shadow-black/5 backdrop-blur",
+        "font-display text-[13px] font-bold uppercase tracking-[0.04em] text-muted",
         className,
       )}
       {...props}
-    />
+    >
+      {"// "}
+      {children}
+      {" //"}
+    </span>
   );
 }
 
 export function Card({ className, ...props }: HTMLAttributes<HTMLElement>) {
   return (
     <article
-      className={cn(
-        "rounded-lg border border-border bg-panel shadow-sm shadow-black/5",
-        className,
-      )}
+      className={cn("rounded-lg border border-border bg-panel", className)}
       {...props}
     />
   );
@@ -71,11 +86,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ) {
     const variantClass = {
       primary:
-        "border-transparent bg-button text-button-text shadow-sm hover:bg-button-hover",
+        "border-transparent bg-button text-button-text hover:bg-button-hover",
       secondary:
-        "border-input-border bg-input text-text shadow-sm hover:border-button hover:bg-surface-soft",
+        "border-input-border bg-input text-text hover:border-accent-line hover:bg-surface-soft",
       outline:
-        "border-input-border bg-transparent text-text hover:border-button hover:bg-surface-soft",
+        "border-input-border bg-transparent text-text hover:border-accent-line hover:bg-surface-soft",
       ghost:
         "border-transparent bg-transparent text-muted hover:bg-surface-soft hover:text-text",
       danger:
@@ -91,7 +106,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         className={cn(
-          "inline-flex shrink-0 items-center justify-center gap-2 rounded-md border font-medium transition focus:outline-none focus:ring-2 focus:ring-ring/40 focus:ring-offset-2 focus:ring-offset-[var(--bg)] disabled:pointer-events-none disabled:opacity-50",
+          "inline-flex shrink-0 items-center justify-center gap-2 rounded-md border font-semibold transition focus:outline-none focus:ring-2 focus:ring-ring/40 focus:ring-offset-2 focus:ring-offset-[var(--bg)] disabled:pointer-events-none disabled:opacity-50",
           variantClass,
           sizeClass,
           className,
@@ -110,7 +125,7 @@ export const FieldInput = forwardRef<
     <input
       ref={ref}
       className={cn(
-        "h-9 rounded-md border border-input-border bg-input px-3 text-sm text-text shadow-sm outline-none transition placeholder:text-subtle focus:border-button focus:ring-2 focus:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50",
+        "h-9 rounded-md border border-input-border bg-input px-3 text-sm text-text outline-none transition placeholder:text-subtle focus:border-accent-line focus:ring-2 focus:ring-ring/40 disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}
       {...props}
@@ -125,7 +140,7 @@ export function FieldSelect({
   return (
     <select
       className={cn(
-        "h-9 rounded-md border border-input-border bg-input px-3 text-sm text-text shadow-sm outline-none transition focus:border-button focus:ring-2 focus:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50",
+        "h-9 rounded-md border border-input-border bg-input px-3 text-sm text-text outline-none transition focus:border-accent-line focus:ring-2 focus:ring-ring/40 disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}
       {...props}
@@ -140,7 +155,7 @@ export function FieldTextarea({
   return (
     <textarea
       className={cn(
-        "min-h-32 rounded-md border border-input-border bg-input px-3 py-2 text-sm text-text shadow-sm outline-none transition placeholder:text-subtle focus:border-button focus:ring-2 focus:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50",
+        "min-h-32 rounded-md border border-input-border bg-input px-3 py-2 text-sm text-text outline-none transition placeholder:text-subtle focus:border-accent-line focus:ring-2 focus:ring-ring/40 disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}
       {...props}
@@ -154,10 +169,7 @@ export function Label({
 }: LabelHTMLAttributes<HTMLLabelElement>) {
   return (
     <label
-      className={cn(
-        "text-xs font-semibold uppercase tracking-wide text-muted",
-        className,
-      )}
+      className={cn("text-sm font-bold text-text", className)}
       {...props}
     />
   );
@@ -232,7 +244,7 @@ export function Alert({
   return (
     <p
       className={cn(
-        "rounded-md border px-3 py-2 text-sm shadow-sm",
+        "rounded-md border px-3 py-2 text-sm",
         toneClass,
         className,
       )}

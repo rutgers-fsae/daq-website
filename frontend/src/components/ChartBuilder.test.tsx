@@ -104,6 +104,48 @@ describe("ChartBuilder", () => {
     );
   });
 
+  it("autocompletes multi-word custom series among many channels", async () => {
+    const user = userEvent.setup();
+    const channels: SchemaColumn[] = Array.from({ length: 9 }, (_, i) => ({
+      name: `Battery ${i + 1}`,
+      type: "numeric",
+      unit: "V",
+      display_name: `Battery ${i + 1} (V)`,
+      sample_values: ["1"],
+    }));
+    render(
+      <ChartBuilder
+        columns={channels}
+        config={{
+          chart_type: "line",
+          y_columns: [],
+          filters: [],
+          computed_columns: [
+            { name: "Battery Power", expression: "`Battery 1` * 2" },
+          ],
+        }}
+        onRun={vi.fn()}
+      />,
+    );
+    const expression = screen.getByLabelText("Custom series expression");
+
+    // Nine matching channels must not crowd out the custom series.
+    await user.type(screen.getByLabelText("Custom series name"), "Net");
+    await user.type(expression, "`Batt");
+    expect(
+      screen.getByRole("option", { name: "Battery Power" }),
+    ).toBeInTheDocument();
+
+    // The whole multi-word name is replaced, and Enter then adds the series.
+    await user.clear(expression);
+    await user.type(expression, "Battery P{Enter}");
+    expect(expression).toHaveValue("`Battery Power`");
+    await user.keyboard("{Enter}");
+    expect(
+      screen.getByRole("button", { name: "Net = `Battery Power`" }),
+    ).toBeInTheDocument();
+  });
+
   it("finds the columns an expression uses", () => {
     expect([...expressionRefs("`Pack Current` * V + abs(x) * 1e5")]).toEqual([
       "Pack Current",

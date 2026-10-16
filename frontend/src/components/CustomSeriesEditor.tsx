@@ -18,14 +18,15 @@ const emptyDraft = { name: "", expression: "", unit: "" };
 const bareName = /^[A-Za-z_]\w*$/;
 
 // The column name being typed at the cursor: either after an open backtick
-// or the trailing identifier.
+// or everything since the last operator, so multi-word names like
+// "Battery Current" match as a whole rather than just their last word.
 function tokenAt(text: string, cursor: number) {
   const before = text.slice(0, cursor);
   const tick = before.lastIndexOf("`");
   if (tick !== -1 && (before.slice(0, tick).split("`").length - 1) % 2 === 0) {
     return { start: tick, query: before.slice(tick + 1), quoted: true };
   }
-  const match = /[A-Za-z_][\w.]*$/.exec(before);
+  const match = /[A-Za-z_][^+\-*/(),`]*$/.exec(before);
   return match ? { start: match.index, query: match[0], quoted: false } : null;
 }
 
@@ -82,23 +83,22 @@ export function CustomSeriesEditor({
   }
 
   const token = tokenAt(draft.expression, cursor);
+  const query = token?.query.toLowerCase() ?? "";
+  const matchRank = (column: SchemaColumn) => {
+    const columnName = column.name.toLowerCase();
+    return columnName === query ? 0 : columnName.startsWith(query) ? 1 : 2;
+  };
+  // Custom series go first (the sort is stable) so a dataset with many
+  // matching channels can't push them past the cut-off.
   const suggestions =
     token && !dismissed && (token.quoted || token.query)
-      ? [...columns, ...usable]
+      ? [...usable, ...columns]
           .filter(
             (column) =>
               column.type === "numeric" &&
-              column.name.toLowerCase().includes(token.query.toLowerCase()),
+              column.name.toLowerCase().includes(query),
           )
-          .sort(
-            (a, b) =>
-              Number(
-                !a.name.toLowerCase().startsWith(token.query.toLowerCase()),
-              ) -
-              Number(
-                !b.name.toLowerCase().startsWith(token.query.toLowerCase()),
-              ),
-          )
+          .sort((a, b) => matchRank(a) - matchRank(b))
           .slice(0, 8)
       : [];
   const selected = Math.min(active, suggestions.length - 1);
@@ -119,9 +119,14 @@ export function CustomSeriesEditor({
     setDraft({ ...draft, expression: next });
     setCursor(position);
     setActive(0);
+    // Close the list so Enter adds the series instead of re-picking the name.
+    setDismissed(true);
     requestAnimationFrame(() => {
-      expressionRef.current?.focus();
-      expressionRef.current?.setSelectionRange(position, position);
+      const input = expressionRef.current;
+      // Skip if the user already typed on; moving the cursor would scramble it.
+      if (!input || input.value !== next) return;
+      input.focus();
+      input.setSelectionRange(position, position);
     });
   }
 

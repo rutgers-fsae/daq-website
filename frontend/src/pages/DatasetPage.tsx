@@ -48,6 +48,7 @@ import type {
   ChartRequest,
   FilterRule,
   PlotTrace,
+  AxisTitles,
 } from "../types/chart";
 import type { Dataset, DatasetMetadata } from "../types/dataset";
 import {
@@ -90,14 +91,7 @@ type GraphState = {
   name: string;
   chartConfig: ChartConfig;
   plotData: PlotTrace[];
-  axisTitles: {
-    xTitle: string;
-    yTitle: string;
-    y2Title?: string;
-    separateAxes?: boolean;
-    traceLabels: Record<string, string>;
-    traceAxisByColumn: Record<string, "y" | "y2">;
-  } | null;
+  axisTitles: AxisTitles | null;
   chartError: string | null;
   isLoading: boolean;
 };
@@ -678,14 +672,7 @@ type SortableGraphCardProps = {
   onRun: (
     graphId: number,
     payload: ChartRequest,
-    titles: {
-      xTitle: string;
-      yTitle: string;
-      y2Title?: string;
-      separateAxes?: boolean;
-      traceLabels: Record<string, string>;
-      traceAxisByColumn: Record<string, "y" | "y2">;
-    },
+    titles: AxisTitles,
     displayUnits: Record<string, string>,
   ) => void;
 };
@@ -1140,14 +1127,7 @@ export function DatasetPage({ theme }: Props) {
   async function runChart(
     graphId: number,
     payload: ChartRequest,
-    titles: {
-      xTitle: string;
-      yTitle: string;
-      y2Title?: string;
-      separateAxes?: boolean;
-      traceLabels: Record<string, string>;
-      traceAxisByColumn: Record<string, "y" | "y2">;
-    },
+    titles: AxisTitles,
     displayUnits: Record<string, string>,
   ) {
     setGraphs((prev) =>

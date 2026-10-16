@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentType, CSSProperties } from "react";
 import { MousePointer2, Table2 } from "lucide-react";
 import { Button } from "./ui";
-import type { PlotTrace } from "../types/chart";
+import type { PlotTrace, AxisTitles } from "../types/chart";
 import {
   calculateVisibleStatistics,
   formatStatistic,
@@ -51,14 +51,7 @@ const COLORWAYS = {
 type Props = {
   data: PlotTrace[];
   theme: "light" | "dark";
-  axisTitles: {
-    xTitle: string;
-    yTitle: string;
-    y2Title?: string;
-    separateAxes?: boolean;
-    traceLabels: Record<string, string>;
-    traceAxisByColumn: Record<string, "y" | "y2">;
-  } | null;
+  axisTitles: AxisTitles | null;
 };
 
 type PlotGraphDiv = HTMLElement & {

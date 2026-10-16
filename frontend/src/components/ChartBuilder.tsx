@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import type { SchemaColumn } from "../types/dataset";
 import type {
+  AxisTitles,
   ChartConfig,
   ChartRequest,
   ComputedColumn,
@@ -45,14 +46,7 @@ type Props = {
   onConfigChange?: (config: ChartConfig) => void;
   onRun: (
     payload: ChartRequest,
-    axisTitles: {
-      xTitle: string;
-      yTitle: string;
-      y2Title?: string;
-      separateAxes?: boolean;
-      traceLabels: Record<string, string>;
-      traceAxisByColumn: Record<string, "y" | "y2">;
-    },
+    axisTitles: AxisTitles,
     displayUnits: Record<string, string>,
   ) => void;
 };

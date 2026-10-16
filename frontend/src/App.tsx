@@ -5,6 +5,7 @@ import { DatasetListPage } from "./pages/DatasetListPage";
 import { Badge, Button, Panel, Tooltip } from "./components/ui";
 import rfrDarkLogo from "./assets/rfr-dark-logo.png";
 import rfrLightLogo from "./assets/rfr-light-logo.png";
+import { ComparePage } from "./pages/ComparePage";
 
 const DatasetPage = lazy(() =>
   import("./pages/DatasetPage").then((mod) => ({ default: mod.DatasetPage })),
@@ -102,6 +103,10 @@ export default function App() {
           </span>
         </Link>
         <div className="flex items-center gap-2">
+          <Link to="/compare" className="text-sm font-medium hover:text-button">
+            {" "}
+            Compare{" "}
+          </Link>
           <Link
             to="/cascadia"
             className="text-sm font-medium hover:text-button"
@@ -136,6 +141,7 @@ export default function App() {
             path="/datasets/:slug"
             element={<DatasetPage theme={theme} />}
           />
+          <Route path="/compare" element={<ComparePage theme={theme} />} />
         </Routes>
       </Suspense>
     </div>

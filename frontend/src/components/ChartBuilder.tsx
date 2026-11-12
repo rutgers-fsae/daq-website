@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -9,8 +9,10 @@ import {
 } from "lucide-react";
 import type { SchemaColumn } from "../types/dataset";
 import type {
+  AxisTitles,
   ChartConfig,
   ChartRequest,
+  ChartType,
   ComputedColumn,
   FilterRule,
 } from "../types/chart";
@@ -42,17 +44,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 type Props = {
   columns: SchemaColumn[];
   config?: ChartConfig;
+  renderRequest?: number;
+  onRenderReady?: (ready: boolean) => void;
+  chartTypes?: ChartType[];
   onConfigChange?: (config: ChartConfig) => void;
   onRun: (
     payload: ChartRequest,
-    axisTitles: {
-      xTitle: string;
-      yTitle: string;
-      y2Title?: string;
-      separateAxes?: boolean;
-      traceLabels: Record<string, string>;
-      traceAxisByColumn: Record<string, "y" | "y2">;
-    },
+    axisTitles: AxisTitles,
     displayUnits: Record<string, string>,
   ) => void;
 };
@@ -93,7 +91,10 @@ export function ChartBuilder({
   columns: schemaColumns,
   config = defaultConfig,
   onConfigChange,
+  renderRequest,
+  onRenderReady,
   onRun,
+  chartTypes = ["line", "scatter", "bar", "histogram", "box"],
 }: Props) {
   const [computed, setComputed] = useState<ComputedColumn[]>(
     config.computed_columns || [],
@@ -103,7 +104,7 @@ export function ChartBuilder({
     [schemaColumns, computed],
   );
   const [chartType, setChartType] = useState<ChartRequest["chart_type"]>(
-    config.chart_type,
+    chartTypes.includes(config.chart_type) ? config.chart_type : chartTypes[0],
   );
   const [xColumn, setXColumn] = useState(config.x_column || "");
   const [unitSelections, setUnitSelections] = useState(() =>
@@ -329,6 +330,23 @@ export function ChartBuilder({
         : `${yColumns.length} series selected`;
   const xDropdownLabel = xColumn ? columnLabel(xColumn) : "Select X Axis";
 
+  const renderButton = useRef<HTMLButtonElement>(null);
+  const previousRenderRequest = useRef(renderRequest);
+  const canRender =
+    yColumns.length > 0 && !hasTooManyUnits && !hasInvalidTimeFilter;
+
+  useEffect(() => {
+    onRenderReady?.(canRender);
+    return () => onRenderReady?.(false);
+  }, [canRender, onRenderReady]);
+
+  useEffect(() => {
+    if (previousRenderRequest.current !== renderRequest) {
+      previousRenderRequest.current = renderRequest;
+      renderButton.current?.click();
+    }
+  }, [renderRequest]);
+
   return (
     <Panel className="grid gap-3 bg-surface-soft p-3 shadow-none">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -366,11 +384,11 @@ export function ChartBuilder({
           className="w-full sm:w-40"
           aria-label="Chart type"
         >
-          <option value="line">Line</option>
-          <option value="scatter">Scatter</option>
-          <option value="bar">Bar</option>
-          <option value="histogram">Histogram</option>
-          <option value="box">Box</option>
+          {chartTypes.map((type) => (
+            <option key={type} value={type}>
+              {type.charAt(0).toUpperCase() + type.slice(1)}
+            </option>
+          ))}
         </FieldSelect>
       </div>
       <div hidden={collapsed} className={collapsed ? undefined : "grid gap-3"}>
@@ -702,9 +720,10 @@ export function ChartBuilder({
           </Alert>
         )}
         <Button
-          disabled={
-            yColumns.length === 0 || hasTooManyUnits || hasInvalidTimeFilter
-          }
+          ref={renderButton}
+          hidden={renderRequest !== undefined}
+          type="button"
+          disabled={!canRender}
           onClick={() =>
             onRun(
               {
@@ -733,7 +752,9 @@ export function ChartBuilder({
             )
           }
           variant="primary"
-          className="justify-self-start"
+          className={
+            renderRequest === undefined ? "justify-self-start" : "hidden"
+          }
         >
           <Play size={15} aria-hidden="true" />
           Render

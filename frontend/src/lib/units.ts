@@ -71,6 +71,7 @@ const aliases: Record<string, string> = {
   us: "µs",
   μs: "µs",
   "°": "deg",
+  sec: "s",
 };
 
 export function canonicalUnit(

@@ -29,6 +29,43 @@ const columns: SchemaColumn[] = [
 ];
 
 describe("ChartBuilder", () => {
+  it("renders current selections only when a shared render is requested", async () => {
+    const onRun = vi.fn();
+    const onRenderReady = vi.fn();
+    const props = {
+      columns,
+      config: {
+        chart_type: "line" as const,
+        y_columns: ["Speed"],
+        filters: [],
+      },
+      onRun,
+      onRenderReady,
+    };
+    const { rerender, unmount } = render(
+      <ChartBuilder {...props} renderRequest={3} />,
+    );
+    expect(onRun).not.toHaveBeenCalled();
+    expect(onRenderReady).toHaveBeenLastCalledWith(true);
+    expect(
+      screen.queryByRole("button", { name: "Render" }),
+    ).not.toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getByLabelText("Chart type"), "scatter");
+    rerender(<ChartBuilder {...props} renderRequest={4} />);
+    expect(onRun).toHaveBeenCalledTimes(1);
+    expect(onRun).toHaveBeenCalledWith(
+      expect.objectContaining({ chart_type: "scatter", y_columns: ["Speed"] }),
+      expect.anything(),
+      {},
+    );
+    rerender(<ChartBuilder {...props} renderRequest={4} />);
+    expect(onRun).toHaveBeenCalledTimes(1);
+    unmount();
+    expect(onRenderReady).toHaveBeenLastCalledWith(false);
+  });
+
   it("emits selected chart request and axis titles", async () => {
     const user = userEvent.setup();
     const onRun = vi.fn();

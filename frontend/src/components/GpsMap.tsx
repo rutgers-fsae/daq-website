@@ -12,15 +12,19 @@ type Props = {
     name: string;
     chartConfig: { filters: FilterRule[] };
   }[];
+  onCursorChange?: (cursor: GpsCursor | null) => void;
 };
+// Current playback position, keyed by the x-axis column a graph may be using.
+export type GpsCursor = Record<string, string | number | null | undefined>;
 type Sample = {
   time: string;
+  startupNs?: number | null;
   seconds: number;
   lat: number | null;
   lon: number | null;
 };
 
-export function GpsMap({ slug, columns, graphs }: Props) {
+export function GpsMap({ slug, columns, graphs, onCursorChange }: Props) {
   const sources = ["ins", "gnss"].filter((source) =>
     ["lat", "lon"].every((axis) =>
       columns.some((column) => column.name === `${source}_${axis}`),
@@ -38,6 +42,7 @@ export function GpsMap({ slug, columns, graphs }: Props) {
   const filters = graph?.chartConfig.filters;
   const hasFix = columns.some((column) => column.name === "gnss_fix");
   const hasTimestamp = columns.some((column) => column.name === "timestamp");
+  const hasStartup = columns.some((column) => column.name === "startup_ns");
 
   useEffect(() => {
     if (!source || !hasTimestamp) return;
@@ -49,6 +54,7 @@ export function GpsMap({ slug, columns, graphs }: Props) {
     setIndex(0);
     const channels = [`${source}_lat`, `${source}_lon`];
     if (source === "gnss" && hasFix) channels.push("gnss_fix");
+    if (hasStartup) channels.push("startup_ns");
     getChartData(slug, {
       chart_type: "line",
       x_column: "timestamp",
@@ -57,7 +63,12 @@ export function GpsMap({ slug, columns, graphs }: Props) {
     })
       .then((result) => {
         if (!active) return;
-        const traces = result.data as { x: string[]; y: (number | null)[] }[];
+        const traces = result.data as {
+          name?: string;
+          x: string[];
+          y: (number | null)[];
+        }[];
+        const startup = traces.find((trace) => trace.name === "startup_ns");
         const times = traces[0]?.x || [];
         const start = Date.parse(times[0]);
         const loaded = times.map((time, i) => {
@@ -78,6 +89,7 @@ export function GpsMap({ slug, columns, graphs }: Props) {
           return {
             time,
             seconds: (Date.parse(time) - start) / 1000,
+            startupNs: startup?.y[i],
             lat: valid ? lat : null,
             lon: valid ? lon : null,
           };
@@ -108,7 +120,15 @@ export function GpsMap({ slug, columns, graphs }: Props) {
     return () => {
       active = false;
     };
-  }, [slug, source, filters, hasFix, hasTimestamp]);
+  }, [slug, source, filters, hasFix, hasTimestamp, hasStartup]);
+
+  useEffect(() => {
+    const sample = samples[index];
+    onCursorChange?.(
+      sample ? { timestamp: sample.time, startup_ns: sample.startupNs } : null,
+    );
+  }, [samples, index, onCursorChange]);
+  useEffect(() => () => onCursorChange?.(null), [onCursorChange]);
 
   useEffect(() => {
     if (!playing || !samples.length) return;

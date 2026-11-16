@@ -212,6 +212,30 @@ describe("PlotView", () => {
       hoverdistance: -1,
     });
   });
+  it("draws the cursor line without resetting zoom as it moves", async () => {
+    const data = [baseTrace];
+    const view = (cursorX: number | null, traces = data) => (
+      <PlotView
+        data={traces}
+        theme="light"
+        axisTitles={null}
+        cursorX={cursorX}
+      />
+    );
+    const { rerender } = render(view(null));
+    await screen.findByTestId("plot");
+    expect(plotState.lastProps?.layout.shapes).toEqual([]);
+    const revision = plotState.lastProps?.layout.uirevision;
+    rerender(view(0.5));
+    expect(plotState.lastProps?.layout.shapes).toMatchObject([
+      { type: "line", xref: "x", yref: "paper", x0: 0.5, x1: 0.5 },
+    ]);
+    expect(plotState.lastProps?.layout.uirevision).toBe(revision);
+    rerender(view(5));
+    expect(plotState.lastProps?.layout.shapes).toEqual([]);
+    rerender(view(0.5, [baseTrace]));
+    expect(plotState.lastProps?.layout.uirevision).not.toBe(revision);
+  });
   it("hides the statistics box", async () => {
     const user = userEvent.setup();
     render(<PlotView data={[baseTrace]} theme="light" axisTitles={null} />);

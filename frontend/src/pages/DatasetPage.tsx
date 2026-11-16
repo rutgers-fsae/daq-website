@@ -34,7 +34,7 @@ import {
 } from "lucide-react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { ChartBuilder } from "../components/ChartBuilder";
-import { GpsMap } from "../components/GpsMap";
+import { GpsMap, type GpsCursor } from "../components/GpsMap";
 import { PlotView } from "../components/PlotView";
 import {
   exportDataset,
@@ -100,6 +100,8 @@ type GraphState = {
   } | null;
   chartError: string | null;
   isLoading: boolean;
+  // What the plotted data was built from; maps the GPS cursor onto its x axis.
+  plotted?: { request: ChartRequest; displayUnits: Record<string, string> };
 };
 
 type PersistedGraphState = Pick<
@@ -672,6 +674,7 @@ type SortableGraphCardProps = {
   totalGraphs: number;
   columns: Parameters<typeof ChartBuilder>[0]["columns"];
   theme: "light" | "dark";
+  gpsCursor: GpsCursor | null;
   onRemove: (id: number) => void;
   onRename: (id: number, name: string) => void;
   onConfigChange: (id: number, config: ChartConfig) => void;
@@ -697,6 +700,7 @@ function SortableGraphCard({
   totalGraphs,
   columns,
   theme,
+  gpsCursor,
   onRemove,
   onRename,
   onConfigChange,
@@ -723,6 +727,24 @@ function SortableGraphCard({
   );
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const { plotted } = graph;
+  const xColumn = plotted?.request.x_column;
+  const cursorRaw =
+    xColumn && ["line", "scatter"].includes(plotted.request.chart_type)
+      ? gpsCursor?.[xColumn]
+      : null;
+  // Same unit conversion the plotted x values went through.
+  const cursorX =
+    plotted && cursorRaw != null
+      ? (
+          convertChartData(
+            [{ x: [cursorRaw] }],
+            plotted.request,
+            columns,
+            plotted.displayUnits,
+          )[0].x as (string | number)[]
+        )[0]
+      : null;
 
   // Full-resolution rows for this graph's columns, custom series and filters.
   // ponytail: values stay in source units; display-unit conversion is plot-only.
@@ -841,6 +863,7 @@ function SortableGraphCard({
           data={graph.plotData}
           theme={theme}
           axisTitles={graph.axisTitles}
+          cursorX={cursorX}
         />
       </div>
     </article>
@@ -881,6 +904,7 @@ export function DatasetPage({ theme }: Props) {
     return [emptyGraph(1)];
   });
   const [activeGraphId, setActiveGraphId] = useState<number | null>(null);
+  const [gpsCursor, setGpsCursor] = useState<GpsCursor | null>(null);
   const [desktopLayout, setDesktopLayout] = useState<"one" | "two">(() => {
     const stored = localStorage.getItem("daq-graph-layout");
     return stored === "one" || stored === "two" ? stored : "two";
@@ -1174,6 +1198,7 @@ export function DatasetPage({ theme }: Props) {
                 axisTitles: titles,
                 chartError: null,
                 isLoading: false,
+                plotted: { request: payload, displayUnits },
               }
             : graph,
         ),
@@ -1191,6 +1216,7 @@ export function DatasetPage({ theme }: Props) {
                 plotData: [],
                 axisTitles: null,
                 isLoading: false,
+                plotted: undefined,
               }
             : graph,
         ),
@@ -1400,7 +1426,13 @@ export function DatasetPage({ theme }: Props) {
         </Collapsible>
       </Panel>
       {!loading && !error && (
-        <GpsMap key={slug} slug={slug} columns={columns} graphs={graphs} />
+        <GpsMap
+          key={slug}
+          slug={slug}
+          columns={columns}
+          graphs={graphs}
+          onCursorChange={setGpsCursor}
+        />
       )}
       {loading && <p className="text-sm text-muted">Loading schema...</p>}
       {error && <Alert tone="danger">Schema load failed: {error}</Alert>}
@@ -1426,6 +1458,7 @@ export function DatasetPage({ theme }: Props) {
                   totalGraphs={graphs.length}
                   columns={columns}
                   theme={theme}
+                  gpsCursor={gpsCursor}
                   onRemove={removeGraph}
                   onRename={renameGraph}
                   onConfigChange={updateGraphConfig}

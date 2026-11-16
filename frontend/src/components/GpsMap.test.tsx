@@ -70,6 +70,37 @@ describe("GpsMap", () => {
     expect(container.querySelector("svg circle")).not.toBeNull();
   });
 
+  it("reports the slider position for the graph cursor line", async () => {
+    vi.mocked(getChartData).mockResolvedValue({
+      data: [...data, { name: "startup_ns", x: times, y: [10, 20, 30, 40] }],
+      row_count: 4,
+    });
+    const onCursorChange = vi.fn();
+    const { unmount } = render(
+      <GpsMap
+        slug="sample"
+        columns={[
+          ...columns,
+          { name: "startup_ns", type: "numeric" } as SchemaColumn,
+        ]}
+        graphs={graphs}
+        onCursorChange={onCursorChange}
+      />,
+    );
+    await screen.findByRole("img");
+    expect(onCursorChange).toHaveBeenLastCalledWith({
+      timestamp: times[0],
+      startup_ns: 10,
+    });
+    fireEvent.change(screen.getByRole("slider"), { target: { value: "2" } });
+    expect(onCursorChange).toHaveBeenLastCalledWith({
+      timestamp: times[2],
+      startup_ns: 30,
+    });
+    unmount();
+    expect(onCursorChange).toHaveBeenLastCalledWith(null);
+  });
+
   it("plays using recorded timing and stops at the end", async () => {
     render(<GpsMap slug="sample" columns={columns} graphs={graphs} />);
     await screen.findByRole("img");

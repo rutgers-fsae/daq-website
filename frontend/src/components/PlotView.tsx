@@ -59,6 +59,8 @@ type Props = {
     traceLabels: Record<string, string>;
     traceAxisByColumn: Record<string, "y" | "y2">;
   } | null;
+  // X value (in this plot's x-axis units) to mark with a vertical line.
+  cursorX?: string | number | null;
 };
 
 type PlotGraphDiv = HTMLElement & {
@@ -76,7 +78,16 @@ type PlotComponentProps = {
   onRelayout?: (event: Record<string, unknown>) => void;
 };
 
-export function PlotView({ data, theme, axisTitles }: Props) {
+// Numbers as-is, timestamps as epoch ms; NaN for anything else.
+function xPosition(value: unknown): number {
+  return typeof value === "number"
+    ? value
+    : typeof value === "string"
+      ? Date.parse(value)
+      : NaN;
+}
+
+export function PlotView({ data, theme, axisTitles, cursorX }: Props) {
   const [PlotComponent, setPlotComponent] =
     useState<ComponentType<PlotComponentProps> | null>(null);
   const [renderError, setRenderError] = useState<string | null>(null);
@@ -91,6 +102,11 @@ export function PlotView({ data, theme, axisTitles }: Props) {
     height: number;
   } | null>(null);
   const [visibleRanges, setVisibleRanges] = useState<VisibleRanges>({});
+  // Bumped whenever the chart itself changes. Plotly keeps the user's zoom
+  // across layout-only updates (like the moving cursor) while this is stable.
+  const [chart, setChart] = useState({ data, axisTitles, revision: 1 });
+  if (chart.data !== data || chart.axisTitles !== axisTitles)
+    setChart({ data, axisTitles, revision: chart.revision + 1 });
 
   useEffect(() => {
     let mounted = true;
@@ -153,6 +169,28 @@ export function PlotView({ data, theme, axisTitles }: Props) {
     window.addEventListener("mouseup", end);
   }
 
+  // Plotly autoranges to include shapes, so a cursor outside this chart's x
+  // data (e.g. another graph's time filter) is hidden instead of squashing it.
+  const xExtent = useMemo(() => {
+    let min = Infinity,
+      max = -Infinity;
+    for (const trace of data) {
+      if (!Array.isArray(trace.x)) continue;
+      for (const value of trace.x) {
+        const x = xPosition(value);
+        if (x < min) min = x;
+        if (x > max) max = x;
+      }
+    }
+    return { min, max };
+  }, [data]);
+  const cursorPosition = xPosition(cursorX);
+  const cursor =
+    cursorX != null &&
+    cursorPosition >= xExtent.min &&
+    cursorPosition <= xExtent.max
+      ? cursorX
+      : null;
   const colors = THEME_COLORS[theme];
   const colorway = COLORWAYS[theme];
   const labeledData = useMemo(() => {
@@ -213,6 +251,22 @@ export function PlotView({ data, theme, axisTitles }: Props) {
   const layout = useMemo(
     () => ({
       autosize: true,
+      uirevision: chart.revision,
+      shapes:
+        cursor === null
+          ? []
+          : [
+              {
+                type: "line",
+                xref: "x",
+                yref: "paper",
+                x0: cursor,
+                x1: cursor,
+                y0: 0,
+                y1: 1,
+                line: { color: colors.text, width: 1.5, dash: "dash" },
+              },
+            ],
       hovermode: sharedHover ? "x unified" : "closest",
       hoverdistance: sharedHover ? -1 : 20,
       hoversubplots: "axis",
@@ -260,6 +314,8 @@ export function PlotView({ data, theme, axisTitles }: Props) {
     }),
     [
       axisTitles,
+      chart.revision,
+      cursor,
       colorway,
       colors.grid,
       colors.paper,

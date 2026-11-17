@@ -101,6 +101,37 @@ describe("GpsMap", () => {
     expect(onCursorChange).toHaveBeenLastCalledWith(null);
   });
 
+  it("uses MoTeC Time for merged logs with gappy timestamps", async () => {
+    const elapsed = [10, 10.5, 11, 12];
+    vi.mocked(getChartData).mockResolvedValue({
+      data: data.map((trace) => ({ ...trace, x: elapsed })),
+      row_count: 4,
+    });
+    const onCursorChange = vi.fn();
+    render(
+      <GpsMap
+        slug="sample"
+        columns={[
+          ...columns,
+          { name: "Time", type: "numeric" } as SchemaColumn,
+        ]}
+        graphs={graphs}
+        onCursorChange={onCursorChange}
+      />,
+    );
+    await screen.findByRole("img");
+    expect(getChartData).toHaveBeenCalledWith(
+      "sample",
+      expect.objectContaining({ x_column: "Time" }),
+    );
+    fireEvent.change(screen.getByRole("slider"), { target: { value: "3" } });
+    expect(screen.getByText(/2.0 s/)).toBeInTheDocument();
+    expect(onCursorChange).toHaveBeenLastCalledWith({
+      Time: 12,
+      startup_ns: undefined,
+    });
+  });
+
   it("plays using recorded timing and stops at the end", async () => {
     render(<GpsMap slug="sample" columns={columns} graphs={graphs} />);
     await screen.findByRole("img");

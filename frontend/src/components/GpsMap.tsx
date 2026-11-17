@@ -17,7 +17,7 @@ type Props = {
 // Current playback position, keyed by the x-axis column a graph may be using.
 export type GpsCursor = Record<string, string | number | null | undefined>;
 type Sample = {
-  time: string;
+  time: string | number;
   startupNs?: number | null;
   seconds: number;
   lat: number | null;
@@ -41,11 +41,16 @@ export function GpsMap({ slug, columns, graphs, onCursorChange }: Props) {
   const graph = graphs.find((item) => item.id === graphId) || graphs[0];
   const filters = graph?.chartConfig.filters;
   const hasFix = columns.some((column) => column.name === "gnss_fix");
-  const hasTimestamp = columns.some((column) => column.name === "timestamp");
+  // Merged MoTeC + VectorNav logs carry VectorNav's `timestamp` only on some
+  // rows and from a clock that restarts per recording, so prefer MoTeC `Time`.
+  const timeColumn = ["Time", "timestamp"].find((name) =>
+    columns.some((column) => column.name === name),
+  );
+  const elapsedTime = timeColumn === "Time";
   const hasStartup = columns.some((column) => column.name === "startup_ns");
 
   useEffect(() => {
-    if (!source || !hasTimestamp) return;
+    if (!source || !timeColumn) return;
     let active = true;
     setLoading(true);
     setError(null);
@@ -57,7 +62,7 @@ export function GpsMap({ slug, columns, graphs, onCursorChange }: Props) {
     if (hasStartup) channels.push("startup_ns");
     getChartData(slug, {
       chart_type: "line",
-      x_column: "timestamp",
+      x_column: timeColumn,
       y_columns: channels,
       filters: filters || [],
     })
@@ -65,12 +70,14 @@ export function GpsMap({ slug, columns, graphs, onCursorChange }: Props) {
         if (!active) return;
         const traces = result.data as {
           name?: string;
-          x: string[];
+          x: (string | number)[];
           y: (number | null)[];
         }[];
         const startup = traces.find((trace) => trace.name === "startup_ns");
         const times = traces[0]?.x || [];
-        const start = Date.parse(times[0]);
+        const toMs = (time: string | number) =>
+          elapsedTime ? Number(time) * 1000 : Date.parse(String(time));
+        const start = toMs(times[0]);
         const loaded = times.map((time, i) => {
           const lat = traces[0].y[i],
             lon = traces[1].y[i];
@@ -88,7 +95,7 @@ export function GpsMap({ slug, columns, graphs, onCursorChange }: Props) {
               (typeof fix === "number" && fix >= 2 && fix <= 8));
           return {
             time,
-            seconds: (Date.parse(time) - start) / 1000,
+            seconds: (toMs(time) - start) / 1000,
             startupNs: startup?.y[i],
             lat: valid ? lat : null,
             lon: valid ? lon : null,
@@ -120,14 +127,16 @@ export function GpsMap({ slug, columns, graphs, onCursorChange }: Props) {
     return () => {
       active = false;
     };
-  }, [slug, source, filters, hasFix, hasTimestamp, hasStartup]);
+  }, [slug, source, filters, hasFix, timeColumn, elapsedTime, hasStartup]);
 
   useEffect(() => {
     const sample = samples[index];
     onCursorChange?.(
-      sample ? { timestamp: sample.time, startup_ns: sample.startupNs } : null,
+      sample && timeColumn
+        ? { [timeColumn]: sample.time, startup_ns: sample.startupNs }
+        : null,
     );
-  }, [samples, index, onCursorChange]);
+  }, [samples, index, onCursorChange, timeColumn]);
   useEffect(() => () => onCursorChange?.(null), [onCursorChange]);
 
   useEffect(() => {
@@ -202,7 +211,7 @@ export function GpsMap({ slug, columns, graphs, onCursorChange }: Props) {
     return { screen, paths, scale };
   }, [samples]);
 
-  if (!sources.length || !hasTimestamp) return null;
+  if (!sources.length || !timeColumn) return null;
   const current = samples[index];
   const position = track?.screen[index];
   return (
@@ -310,7 +319,8 @@ export function GpsMap({ slug, columns, graphs, onCursorChange }: Props) {
             />
           </div>
           <p className="text-sm text-muted" aria-live="off">
-            {current?.time} · {current?.seconds.toFixed(1)} s ·{" "}
+            {elapsedTime ? "" : `${current?.time} · `}
+            {current?.seconds.toFixed(1)} s ·{" "}
             {position
               ? `${current.lat?.toFixed(6)}, ${current.lon?.toFixed(6)}`
               : "No valid position"}
